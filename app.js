@@ -6,6 +6,13 @@ let carrierMasterData = JSON.parse(localStorage.getItem('carrierMasterData')) ||
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNFpQftoRc-wML2yHNUkkIsKTPY9wMUuFwcGh4wpOPRkRtiZWZvxj4tUrPuaUlh_dKGA/exec';
 
+const SHEET_HEADERS = [
+    'id','agent','customerName','source','policyType','lineOfBusiness','company','mga',
+    'down','agencyFee','basePremium','agencyCommission','agentCommissionShare',
+    'totalPremium','paymentType','paymentMethod2','policyNumber','binderNumber',
+    'entryDate','effDate','term','timestamp','status'
+];
+
 async function loadFromSheet() {
     try {
         const res = await fetch(`${SCRIPT_URL}?action=getAll`);
