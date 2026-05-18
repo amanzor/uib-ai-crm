@@ -27,7 +27,19 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeAgentData();
     initializeAgentButtons();
     setTodayDate();
+
+    ['agencyFee', 'agencyCommission'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calculateAgentCommission);
+    });
 });
+
+function calculateAgentCommission() {
+    const fee = parseFloat(document.getElementById('agencyFee').value) || 0;
+    const commission = parseFloat(document.getElementById('agencyCommission').value) || 0;
+    const agentShare = parseFloat(((fee + commission) * 0.5).toFixed(2));
+    const field = document.getElementById('agentCommission');
+    if (field) field.value = agentShare > 0 ? agentShare : '';
+}
 
 function initializeAgentButtons() {
     const agentList = document.getElementById('agentList');
@@ -178,7 +190,7 @@ function saveEntry() {
         term: document.getElementById('term').value,
         timestamp: new Date().toISOString()
     };
-    entry.agentCommissionShare = parseFloat((entry.agencyCommission * 0.5).toFixed(2));
+    entry.agentCommissionShare = parseFloat(((entry.agencyFee + entry.agencyCommission) * 0.5).toFixed(2));
 
     allData.push(entry);
     localStorage.setItem('binderData', JSON.stringify(allData));
@@ -231,6 +243,7 @@ function saveEntry() {
 
     showSuccess();
     document.getElementById('agentForm').reset();
+    document.getElementById('agentCommission').value = '';
     setTodayDate();
     loadAgentData();
 }
@@ -1279,12 +1292,12 @@ function displayAllCommissions(commissions) {
             if (!agentTotals[agent]) agentTotals[agent] = 0;
             allCommissions.push({
                 agent,
-                carrier: 'Agency Commission',
+                carrier: 'Agent Commission',
                 lob: `${data.count} polic${data.count === 1 ? 'y' : 'ies'}`,
                 month,
                 amount: data.total,
                 rate: 50,
-                premium: data.agencyTotal,
+                premium: data.combinedTotal,
                 type: '🤝 Agent Share',
                 agentTotal: 0,
                 isAgentShare: true
@@ -1379,9 +1392,11 @@ function getAgentCommissionShares(agentName) {
     const byMonth = {};
     entries.forEach(e => {
         const month = new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-        if (!byMonth[month]) byMonth[month] = { total: 0, agencyTotal: 0, count: 0 };
+        if (!byMonth[month]) byMonth[month] = { total: 0, agencyFeeTotal: 0, agencyCommissionTotal: 0, combinedTotal: 0, count: 0 };
         byMonth[month].total += e.agentCommissionShare;
-        byMonth[month].agencyTotal += e.agencyCommission;
+        byMonth[month].agencyFeeTotal += e.agencyFee || 0;
+        byMonth[month].agencyCommissionTotal += e.agencyCommission || 0;
+        byMonth[month].combinedTotal += (e.agencyFee || 0) + (e.agencyCommission || 0);
         byMonth[month].count++;
     });
     return byMonth;
@@ -1444,13 +1459,13 @@ function loadAgentCommissionData() {
     renderCarrierRows(grossPaidCarriers, '💰 Gross Paid Carriers', '#f3e5f5');
 
     if (hasShareData) {
-        tableHTML += `<tr style="background-color: #e8f5e9; font-weight: bold;"><td colspan="4">🤝 Agent Commission (50% of Agency Commission)</td></tr>`;
+        tableHTML += `<tr style="background-color: #e8f5e9; font-weight: bold;"><td colspan="4">🤝 Agent Commission (50% of Agency Fee + Agency Commission)</td></tr>`;
         Object.entries(agentShares).forEach(([month, data]) => {
             tableHTML += `<tr>
-                <td>Agency Commission</td>
+                <td>Agent Commission</td>
                 <td>${data.count} polic${data.count === 1 ? 'y' : 'ies'}</td>
                 <td>${month}</td>
-                <td style="font-family: monospace; font-size: 0.95em;">$${data.agencyTotal.toFixed(2)}×50%=<strong>$${data.total.toFixed(2)}</strong></td>
+                <td style="font-family: monospace; font-size: 0.95em;">($${data.agencyFeeTotal.toFixed(2)}+$${data.agencyCommissionTotal.toFixed(2)})×50%=<strong>$${data.total.toFixed(2)}</strong></td>
             </tr>`;
         });
     }
