@@ -114,7 +114,7 @@ function initializeCredentials() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-    await syncFromDrive();  // Pull latest data from Google Drive first
+    // Show agents immediately — don't wait for Drive sync
     initializeCredentials();
     initializeCommissionData();
     initializeCarrierData();
@@ -124,6 +124,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     ['agencyFee', 'agencyCommission'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', calculateAgentCommission);
+    });
+
+    // Sync from Drive in background — won't block the UI
+    syncFromDrive().then(() => {
+        initializeAgentButtons(); // Refresh agent buttons after sync
     });
 });
 
