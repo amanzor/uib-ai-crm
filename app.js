@@ -17,9 +17,14 @@ async function loadFromSheet() {
     try {
         const res = await fetch(`${SCRIPT_URL}?action=getAll`);
         const data = await res.json();
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
             allData = data;
             localStorage.setItem('binderData', JSON.stringify(allData));
+        } else if (Array.isArray(data) && data.length === 0 && allData.length > 0) {
+            // Sheet is empty but we have local data — migrate it up
+            for (const entry of allData) {
+                syncToSheet('save', { entry });
+            }
         }
     } catch (e) {
         console.warn('Google Sheets load failed, using local data:', e);
