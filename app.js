@@ -1175,6 +1175,19 @@ function closeCommissionDashboard() {
     document.getElementById('commissionDashboardModal').classList.remove('active');
 }
 
+function clearAllCommissions() {
+    if (confirm('⚠️ This will permanently delete ALL commission entries for all agents. Are you sure?')) {
+        if (confirm('Are you REALLY sure? This cannot be undone!')) {
+            commissionData = {};
+            localStorage.setItem('commissionData', JSON.stringify({}));
+            allData = allData.map(e => ({ ...e, agentCommissionShare: 0 }));
+            localStorage.setItem('binderData', JSON.stringify(allData));
+            loadCommissionDashboard();
+            alert('All commission entries have been cleared.');
+        }
+    }
+}
+
 function loadCommissionDashboard() {
     const commissions = loadCommissionData();
 
