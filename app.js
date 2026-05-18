@@ -306,6 +306,7 @@ function saveEntry() {
         agent: currentUser,
         customerName: document.getElementById('customerName').value,
         source: document.getElementById('source').value,
+        referredBy: document.getElementById('referredBy').value,
         policyType: document.getElementById('policyType').value,
         lineOfBusiness: document.getElementById('lineOfBusiness').value,
         company: document.getElementById('company').value,
