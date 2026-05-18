@@ -328,7 +328,6 @@ function saveEntry() {
 
     allData.push(entry);
     localStorage.setItem('binderData', JSON.stringify(allData));
-    syncToSheet('save', { entry });
 
     // Calculate and store commission
     const premium = entry.totalPremium;
@@ -660,7 +659,6 @@ function updateEntry() {
     entry.status = document.getElementById('editStatus').value;
     entry.agentCommissionShare = parseFloat(((entry.agencyFee + entry.agencyCommission) * 0.5).toFixed(2));
     localStorage.setItem('binderData', JSON.stringify(allData));
-    syncToSheet('update', { entry });
     closeModal();
     if (currentRole === 'agent') loadAgentData(); else loadAdminDashboard();
 }
@@ -669,7 +667,6 @@ function deleteEntry(id) {
     if (confirm('Are you sure you want to delete this entry?')) {
         allData = allData.filter(d => d.id !== id);
         localStorage.setItem('binderData', JSON.stringify(allData));
-        syncToSheet('delete', { id });
         if (currentRole === 'agent') {
             loadAgentData();
         } else {
@@ -729,7 +726,6 @@ function exportToCSV(entries, filename) {
 }
 
 function exportToExcel() {
-    alert('Excel export requires installation of a library. For now, please use CSV export and open in Excel.');
     exportAllData();
 }
 
