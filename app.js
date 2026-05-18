@@ -1131,8 +1131,8 @@ function loadAgentList() {
 // Open Add Agent Modal
 function openAddAgentModal() {
     document.getElementById('agentFormTitle').textContent = 'Add New Agent';
-    document.getElementById('agentForm').reset();
-    document.getElementById('agentForm').dataset.editingAgent = '';
+    document.getElementById('manageAgentForm').reset();
+    document.getElementById('manageAgentForm').dataset.editingAgent = '';
     document.querySelectorAll('.licenseCheckbox').forEach(cb => cb.checked = false);
     document.getElementById('docStatusMessage').innerHTML = '';
     document.getElementById('addEditAgentModal').classList.add('active');
@@ -1173,7 +1173,7 @@ function editAgent(agentName) {
         document.getElementById('docStatusMessage').innerHTML = '';
     }
 
-    document.getElementById('agentForm').dataset.editingAgent = agentName;
+    document.getElementById('manageAgentForm').dataset.editingAgent = agentName;
     document.getElementById('addEditAgentModal').classList.add('active');
 }
 
@@ -1191,7 +1191,7 @@ function deleteAgent(agentName) {
 }
 
 // Handle agent form submission
-document.getElementById('agentForm')?.addEventListener('submit', (e) => {
+document.getElementById('manageAgentForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
 
     const agentName = document.getElementById('agentName').value.trim();
