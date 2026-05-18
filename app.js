@@ -4,7 +4,7 @@ let currentRole = null;
 let allData = JSON.parse(localStorage.getItem('binderData')) || [];
 let carrierMasterData = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNFpQftoRc-wML2yHNUkkIsKTPY9wMUuFwcGh4wpOPRkRtiZWZvxj4tUrPuaUlh_dKGA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrATkY7yXxhQTeJayjO09bByka77XrKLQZxu5OTBsbmrwTIeltN5AzuI3UWvt28xA6Hw/exec';
 
 const SHEET_HEADERS = [
     'id','agent','customerName','source','policyType','lineOfBusiness','company','mga',
