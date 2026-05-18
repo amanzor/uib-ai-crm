@@ -954,25 +954,240 @@
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal">
-        <div class="modal-content">
-            <h3>Edit Policy Entry</h3>
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <h3>✏️ Edit Policy Entry</h3>
             <form id="editForm">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Customer Name</label>
-                    <input type="text" id="editCustomerName">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Total Premium</label>
-                    <input type="number" id="editTotalPremium" step="0.01">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Status</label>
-                    <select id="editStatus">
-                        <option value="">Pending</option>
-                        <option value="Clean">Clean</option>
-                        <option value="Alta">Alta</option>
-                        <option value="Other">Other</option>
-                    </select>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Customer Name</label>
+                        <input type="text" id="editCustomerName">
+                    </div>
+                    <div class="form-group">
+                        <label>Source</label>
+                        <select id="editSource">
+                            <option value="">Select Source</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Walk-In">Walk-In</option>
+                            <option value="Online">Online</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Repeat Client">Repeat Client</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Agent Referral">Agent Referral</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Policy Type</label>
+                        <select id="editPolicyType">
+                            <option value="">Select Type</option>
+                            <option value="New">New</option>
+                            <option value="Rewrite">Rewrite</option>
+                            <option value="Renew A-B">Renew A-B</option>
+                            <option value="Renewal">Renewal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Line of Business</label>
+                        <select id="editLineOfBusiness">
+                            <option value="">Select Line</option>
+                            <option value="BOP">BOP</option>
+                            <option value="Boat">Boat</option>
+                            <option value="Builders Risk">Builders Risk</option>
+                            <option value="Business Owner">Business Owner</option>
+                            <option value="Classic Collectors">Classic Collectors</option>
+                            <option value="Commercial Auto">Commercial Auto</option>
+                            <option value="Commercial Property">Commercial Property</option>
+                            <option value="Excess Liability">Excess Liability</option>
+                            <option value="Flood">Flood</option>
+                            <option value="Garage Keepers">Garage Keepers</option>
+                            <option value="General Liability">General Liability</option>
+                            <option value="Home Owners DP1">Home Owners DP1</option>
+                            <option value="Home Owners DP2">Home Owners DP2</option>
+                            <option value="Home Owners DP3">Home Owners DP3</option>
+                            <option value="Home Owners H3">Home Owners H3</option>
+                            <option value="Home Owners H4">Home Owners H4</option>
+                            <option value="Home Owners H6">Home Owners H6</option>
+                            <option value="Home Owners H8">Home Owners H8</option>
+                            <option value="Inland Marine">Inland Marine</option>
+                            <option value="Motorcycle/ATV">Motorcycle/ATV</option>
+                            <option value="Personal Auto">Personal Auto</option>
+                            <option value="Professional Liability">Professional Liability</option>
+                            <option value="Surety Bond">Surety Bond</option>
+                            <option value="Trucking">Trucking</option>
+                            <option value="Umbrella">Umbrella</option>
+                            <option value="Workers Comp">Workers Comp</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Insurance Company</label>
+                        <select id="editCompany">
+                            <option value="">Select Company</option>
+                            <option value="AIG">AIG</option>
+                            <option value="Admiral">Admiral</option>
+                            <option value="AmWins">AmWins</option>
+                            <option value="American Tradition">American Tradition</option>
+                            <option value="Ascendant">Ascendant</option>
+                            <option value="Atunne">Atunne</option>
+                            <option value="Avatar">Avatar</option>
+                            <option value="Bristol West">Bristol West</option>
+                            <option value="Brit Global">Brit Global</option>
+                            <option value="Citizens">Citizens</option>
+                            <option value="Edison">Edison</option>
+                            <option value="FedNat">FedNat</option>
+                            <option value="Florida Penninsula">Florida Penninsula</option>
+                            <option value="Foremost Star">Foremost Star</option>
+                            <option value="Gainsco">Gainsco</option>
+                            <option value="Granada">Granada</option>
+                            <option value="Grundy">Grundy</option>
+                            <option value="Guard">Guard</option>
+                            <option value="Hagerty">Hagerty</option>
+                            <option value="Heritage">Heritage</option>
+                            <option value="Hiscox">Hiscox</option>
+                            <option value="Hudson">Hudson</option>
+                            <option value="Imperial Flood">Imperial Flood</option>
+                            <option value="Infinity">Infinity</option>
+                            <option value="Johnson&amp;Johnson">Johnson&amp;Johnson</option>
+                            <option value="Mercury">Mercury</option>
+                            <option value="Monarch">Monarch</option>
+                            <option value="Mount Vernon Fire">Mount Vernon Fire</option>
+                            <option value="NICO">NICO</option>
+                            <option value="National General">National General</option>
+                            <option value="Next Insurance">Next Insurance</option>
+                            <option value="Ocean Harbor">Ocean Harbor</option>
+                            <option value="Peoples Trust">Peoples Trust</option>
+                            <option value="ProPronto">ProPronto</option>
+                            <option value="Progressive">Progressive</option>
+                            <option value="Responssive Auto">Responssive Auto</option>
+                            <option value="Scottdale">Scottdale</option>
+                            <option value="Southern Oak">Southern Oak</option>
+                            <option value="State National">State National</option>
+                            <option value="Swifft">Swifft</option>
+                            <option value="TYPTAP">TYPTAP</option>
+                            <option value="The Hearth">The Hearth</option>
+                            <option value="Tokio Marine">Tokio Marine</option>
+                            <option value="UPC">UPC</option>
+                            <option value="USLI">USLI</option>
+                            <option value="United Auto">United Auto</option>
+                            <option value="United Specialty">United Specialty</option>
+                            <option value="Universal North">Universal North</option>
+                            <option value="Universal P&amp;C">Universal P&amp;C</option>
+                            <option value="Windhaven">Windhaven</option>
+                            <option value="Wright Flood">Wright Flood</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>MGA / Premium Finance</label>
+                        <select id="editMga">
+                            <option value="">Select MGA (Optional)</option>
+                            <option value="5Star">5Star</option>
+                            <option value="ACI-Ascendant">ACI-Ascendant</option>
+                            <option value="All Risk">All Risk</option>
+                            <option value="Appalachian">Appalachian</option>
+                            <option value="Bass Underwriters">Bass Underwriters</option>
+                            <option value="FastComp">FastComp</option>
+                            <option value="Hiscox-London">Hiscox-London</option>
+                            <option value="Hull&amp;Co">Hull&amp;Co</option>
+                            <option value="London Underwriters">London Underwriters</option>
+                            <option value="MJ Kelly">MJ Kelly</option>
+                            <option value="Phyladelphia">Phyladelphia</option>
+                            <option value="SCU">SCU</option>
+                            <option value="Security Underwriters">Security Underwriters</option>
+                            <option value="Shelly Middle Brooks">Shelly Middle Brooks</option>
+                            <option value="Surety One">Surety One</option>
+                            <option value="Tapco">Tapco</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Down Payment ($)</label>
+                        <input type="number" id="editDown" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Agency Fee ($)</label>
+                        <input type="number" id="editAgencyFee" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Base Premium ($)</label>
+                        <input type="number" id="editBasePremium" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Premium ($)</label>
+                        <input type="number" id="editTotalPremium" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="editPaymentMethod">
+                            <option value="">Select Method</option>
+                            <option value="CC-Agency">CC-Agency</option>
+                            <option value="CC-Client">CC-Client</option>
+                            <option value="CC-Company">CC-Company</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="ACH to Agency">ACH to Agency</option>
+                            <option value="Direct Billing">Direct Billing</option>
+                            <option value="EFT">EFT</option>
+                            <option value="Escrow">Escrow</option>
+                            <option value="Money Order">Money Order</option>
+                            <option value="Premium Finance">Premium Finance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Second Payment Method</label>
+                        <select id="editPaymentMethod2">
+                            <option value="">Select Method (Optional)</option>
+                            <option value="CC-Agency">CC-Agency</option>
+                            <option value="CC-Client">CC-Client</option>
+                            <option value="CC-Company">CC-Company</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="ACH to Agency">ACH to Agency</option>
+                            <option value="Direct Billing">Direct Billing</option>
+                            <option value="EFT">EFT</option>
+                            <option value="Escrow">Escrow</option>
+                            <option value="Money Order">Money Order</option>
+                            <option value="Premium Finance">Premium Finance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Policy Number</label>
+                        <input type="text" id="editPolicyNumber">
+                    </div>
+                    <div class="form-group">
+                        <label>Entry Date</label>
+                        <input type="date" id="editEntryDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Effective Date</label>
+                        <input type="date" id="editEffDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Term (Months)</label>
+                        <select id="editTerm">
+                            <option value="">Select Term</option>
+                            <option value="6">6 Months</option>
+                            <option value="12">12 Months</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Agency Commission ($)</label>
+                        <input type="number" id="editAgencyCommission" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Commission Type</label>
+                        <select id="editPaymentType">
+                            <option value="">Select Commission Type</option>
+                            <option value="Monthly Paid">📅 Monthly Paid</option>
+                            <option value="Gross Paid">🔥 Gross Paid</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="editStatus">
+                            <option value="">Pending</option>
+                            <option value="Clean">Clean</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
