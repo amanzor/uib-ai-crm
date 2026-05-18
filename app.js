@@ -4,6 +4,33 @@ let currentRole = null;
 let allData = JSON.parse(localStorage.getItem('binderData')) || [];
 let carrierMasterData = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNFpQftoRc-wML2yHNUkkIsKTPY9wMUuFwcGh4wpOPRkRtiZWZvxj4tUrPuaUlh_dKGA/exec';
+
+async function loadFromSheet() {
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=getAll`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            allData = data;
+            localStorage.setItem('binderData', JSON.stringify(allData));
+        }
+    } catch (e) {
+        console.warn('Google Sheets load failed, using local data:', e);
+    }
+}
+
+async function syncToSheet(action, payload) {
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action, ...payload })
+        });
+    } catch (e) {
+        console.warn('Google Sheets sync failed:', e);
+    }
+}
+
 const AGENTS = ['Alberto Manzor', 'Randy Diaz', 'Amanda Montano', 'Uriel Rendon', 'Jorge Castro', 'Lazaro Reigoza'];
 
 // Initialize credentials with default passwords
@@ -81,8 +108,11 @@ document.getElementById('agentLoginForm')?.addEventListener('submit', (e) => {
         document.getElementById('agentForm').reset();
         setTodayDate();
         generateBinderNumber();
-        loadAgentData();
-        populateAgentFilter();
+        loadFromSheet().then(() => {
+            loadAgentData();
+            populateAgentFilter();
+            generateBinderNumber();
+        });
     } else {
         alert('Incorrect password');
         document.getElementById('agentPassword').value = '';
@@ -136,7 +166,7 @@ document.getElementById('adminLoginForm')?.addEventListener('submit', (e) => {
         currentRole = 'admin';
         closeAdminLoginModal();
         showSection('adminSection');
-        loadAdminDashboard();
+        loadFromSheet().then(() => loadAdminDashboard());
     } else {
         alert('Incorrect password');
         document.getElementById('adminPassword').value = '';
@@ -196,6 +226,7 @@ function saveEntry() {
 
     allData.push(entry);
     localStorage.setItem('binderData', JSON.stringify(allData));
+    syncToSheet('save', { entry });
 
     // Calculate and store commission
     const premium = entry.totalPremium;
@@ -527,6 +558,7 @@ function updateEntry() {
     entry.status = document.getElementById('editStatus').value;
     entry.agentCommissionShare = parseFloat(((entry.agencyFee + entry.agencyCommission) * 0.5).toFixed(2));
     localStorage.setItem('binderData', JSON.stringify(allData));
+    syncToSheet('update', { entry });
     closeModal();
     if (currentRole === 'agent') loadAgentData(); else loadAdminDashboard();
 }
@@ -535,6 +567,7 @@ function deleteEntry(id) {
     if (confirm('Are you sure you want to delete this entry?')) {
         allData = allData.filter(d => d.id !== id);
         localStorage.setItem('binderData', JSON.stringify(allData));
+        syncToSheet('delete', { id });
         if (currentRole === 'agent') {
             loadAgentData();
         } else {
