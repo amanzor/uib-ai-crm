@@ -32,7 +32,7 @@ async function syncFromDrive() {
     for (const key of SYNC_KEYS) {
         const data = await driveGet(key);
         if (data !== null) {
-            localStorage.setItem(key, JSON.stringify(data));
+            _origSetItem(key, JSON.stringify(data)); // bypass override to avoid write-back loop
         }
     }
     if (banner) banner.style.display = 'none';
@@ -50,6 +50,33 @@ localStorage.setItem = function(key, value) {
         try { driveSet(key, JSON.parse(value)); } catch(e) {}
     }
 };
+
+// Auto-poll Drive every 30 seconds and refresh the current view
+function startAutoSync() {
+    setInterval(async () => {
+        await syncFromDrive();
+
+        // Reload allData and carrierMasterData from localStorage after sync
+        const freshData = JSON.parse(localStorage.getItem('binderData'));
+        const freshCarriers = JSON.parse(localStorage.getItem('carrierMasterData'));
+        if (freshData) allData = freshData;
+        if (freshCarriers) carrierMasterData = freshCarriers;
+
+        // Refresh whichever view is currently active
+        if (currentRole === 'admin') {
+            loadAdminDashboard();
+        } else if (currentRole === 'agent') {
+            loadAgentData();
+        }
+
+        // Flash the sync indicator briefly
+        const banner = document.getElementById('syncBanner');
+        if (banner) {
+            banner.style.display = 'flex';
+            setTimeout(() => { banner.style.display = 'none'; }, 1500);
+        }
+    }, 30000); // every 30 seconds
+}
 // ============================================================
 
 // Data Management
@@ -130,6 +157,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     syncFromDrive().then(() => {
         initializeAgentButtons(); // Refresh agent buttons after sync
     });
+
+    // Start polling Drive every 30 seconds for live updates
+    startAutoSync();
 });
 
 function calculateAgentCommission() {
