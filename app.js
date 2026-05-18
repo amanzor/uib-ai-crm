@@ -1270,36 +1270,53 @@ function displayAllCommissions(commissions) {
         });
     }
 
-    // Add agent totals to each row
-    allCommissions = allCommissions.map(c => ({
-        ...c,
-        agentTotal: agentTotals[c.agent]
-    }));
+    // Also collect agent commission share rows
+    const filterAgentForShares = filterAgent;
+    AGENTS.forEach(agent => {
+        if (filterAgentForShares && agent !== filterAgentForShares) return;
+        const shares = getAgentCommissionShares(agent);
+        Object.entries(shares).forEach(([month, data]) => {
+            if (!agentTotals[agent]) agentTotals[agent] = 0;
+            allCommissions.push({
+                agent,
+                carrier: 'Agency Commission',
+                lob: `${data.count} polic${data.count === 1 ? 'y' : 'ies'}`,
+                month,
+                amount: data.total,
+                rate: 50,
+                premium: data.agencyTotal,
+                type: '🤝 Agent Share',
+                agentTotal: 0,
+                isAgentShare: true
+            });
+            agentTotals[agent] = (agentTotals[agent] || 0) + data.total;
+        });
+    });
 
-    // Calculate stats
+    allCommissions = allCommissions.map(c => ({ ...c, agentTotal: agentTotals[c.agent] }));
+
     const totalCommissions = allCommissions.reduce((sum, c) => sum + c.amount, 0);
     const avgCommission = allCommissions.length > 0 ? totalCommissions / allCommissions.length : 0;
     const activeAgents = Object.keys(agentTotals).length;
 
-    // Update stats
     document.getElementById('totalCommissions').textContent = `$${totalCommissions.toFixed(2)}`;
     document.getElementById('avgCommission').textContent = `$${avgCommission.toFixed(2)}`;
     document.getElementById('activeCommissionAgents').textContent = activeAgents;
 
-    // Populate table
     const tbody = document.getElementById('commissionTable');
     if (allCommissions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="no-data">No commission data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No commission data available</td></tr>';
         return;
     }
 
     tbody.innerHTML = allCommissions.map(c => {
-        let commissionDisplay = `$${c.amount.toFixed(2)}`;
-        if (c.premium > 0 && c.rate > 0) {
-            commissionDisplay = `$${c.premium.toFixed(2)}×${c.rate}%=$${c.amount.toFixed(2)}`;
-        }
-        return `
-        <tr>
+        const commissionDisplay = c.premium > 0 && c.rate > 0
+            ? `$${c.premium.toFixed(2)}×${c.rate}%=$${c.amount.toFixed(2)}`
+            : `$${c.amount.toFixed(2)}`;
+        const deleteBtn = c.isAgentShare
+            ? `<button class="btn-danger btn-sm" onclick="deleteAgentShareByMonth('${c.agent}','${c.month}')">Delete</button>`
+            : `<button class="btn-danger btn-sm" onclick="deleteCommissionEntry('${c.agent}','${c.type.includes('Monthly') ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers'}','${c.carrier}','${c.month}')">Delete</button>`;
+        return `<tr>
             <td><strong>${c.agent}</strong></td>
             <td>${c.type}</td>
             <td>${c.carrier}</td>
@@ -1307,9 +1324,33 @@ function displayAllCommissions(commissions) {
             <td>${c.month}</td>
             <td style="font-family: monospace; font-size: 0.95em;">${commissionDisplay}</td>
             <td>$${c.agentTotal.toFixed(2)}</td>
-        </tr>
-    `;
+            <td>${deleteBtn}</td>
+        </tr>`;
     }).join('');
+}
+
+function deleteCommissionEntry(agent, carrierType, carrier, month) {
+    if (!confirm(`Delete commission entry for ${agent} — ${carrier} (${month})?`)) return;
+    const commData = JSON.parse(localStorage.getItem('commissionData')) || {};
+    if (commData[agent]?.[carrierType]?.[carrier]?.[month]) {
+        delete commData[agent][carrierType][carrier][month];
+        if (Object.keys(commData[agent][carrierType][carrier]).length === 0)
+            delete commData[agent][carrierType][carrier];
+    }
+    commissionData = commData;
+    localStorage.setItem('commissionData', JSON.stringify(commData));
+    displayAllCommissions(commData);
+}
+
+function deleteAgentShareByMonth(agent, month) {
+    if (!confirm(`Delete agent commission share for ${agent} — ${month}?`)) return;
+    allData = allData.map(e => {
+        const entryMonth = new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        if (e.agent === agent && entryMonth === month) return { ...e, agentCommissionShare: 0 };
+        return e;
+    });
+    localStorage.setItem('binderData', JSON.stringify(allData));
+    displayAllCommissions(loadCommissionData());
 }
 
 function filterCommissions() {
