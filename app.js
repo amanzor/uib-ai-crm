@@ -178,6 +178,7 @@ function saveEntry() {
         term: document.getElementById('term').value,
         timestamp: new Date().toISOString()
     };
+    entry.agentCommissionShare = parseFloat((entry.agencyCommission * 0.5).toFixed(2));
 
     allData.push(entry);
     localStorage.setItem('binderData', JSON.stringify(allData));
@@ -1319,6 +1320,19 @@ function closeAgentCommissions() {
     document.getElementById('agentCommissionModal').classList.remove('active');
 }
 
+function getAgentCommissionShares(agentName) {
+    const entries = allData.filter(d => d.agent === agentName && d.agentCommissionShare > 0);
+    const byMonth = {};
+    entries.forEach(e => {
+        const month = new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        if (!byMonth[month]) byMonth[month] = { total: 0, agencyTotal: 0, count: 0 };
+        byMonth[month].total += e.agentCommissionShare;
+        byMonth[month].agencyTotal += e.agencyCommission;
+        byMonth[month].count++;
+    });
+    return byMonth;
+}
+
 function loadAgentCommissionData() {
     const commissions = loadCommissionData();
     const agent = currentUser;
@@ -1326,88 +1340,64 @@ function loadAgentCommissionData() {
     const agentData = commissions[agent] || { monthlyPaidCommissionCarriers: {}, grossPaidCarriers: {} };
     const monthlyPaidCarriers = agentData.monthlyPaidCommissionCarriers || {};
     const grossPaidCarriers = agentData.grossPaidCarriers || {};
+    const agentShares = getAgentCommissionShares(agent);
 
-    // Calculate totals
     let totalCommissions = 0;
     let allMonths = new Set();
 
     Object.values(monthlyPaidCarriers).forEach(carrier => {
-        Object.values(carrier).forEach(entry => {
-            const amount = typeof entry === 'object' ? entry.amount : entry;
-            totalCommissions += amount;
-        });
+        Object.values(carrier).forEach(entry => { totalCommissions += typeof entry === 'object' ? entry.amount : entry; });
         Object.keys(carrier).forEach(month => allMonths.add(month));
     });
-
     Object.values(grossPaidCarriers).forEach(carrier => {
-        Object.values(carrier).forEach(entry => {
-            const amount = typeof entry === 'object' ? entry.amount : entry;
-            totalCommissions += amount;
-        });
+        Object.values(carrier).forEach(entry => { totalCommissions += typeof entry === 'object' ? entry.amount : entry; });
         Object.keys(carrier).forEach(month => allMonths.add(month));
     });
+    Object.values(agentShares).forEach(m => { totalCommissions += m.total; Object.keys(agentShares).forEach(mo => allMonths.add(mo)); });
 
     const monthCount = allMonths.size;
-    const avgCommission = monthCount > 0 ? totalCommissions / monthCount : 0;
-
-    // Update stats
     document.getElementById('agentTotalCommissions').textContent = `$${totalCommissions.toFixed(2)}`;
-    document.getElementById('agentAvgCommission').textContent = `$${avgCommission.toFixed(2)}`;
+    document.getElementById('agentAvgCommission').textContent = `$${(monthCount > 0 ? totalCommissions / monthCount : 0).toFixed(2)}`;
     document.getElementById('agentCommissionCount').textContent = monthCount;
 
-    // Populate table with carrier breakdowns
     const tbody = document.getElementById('agentCommissionTable');
+    const hasCarrierData = Object.keys(monthlyPaidCarriers).length > 0 || Object.keys(grossPaidCarriers).length > 0;
+    const hasShareData = Object.keys(agentShares).length > 0;
 
-    if (Object.keys(monthlyPaidCarriers).length === 0 && Object.keys(grossPaidCarriers).length === 0) {
+    if (!hasCarrierData && !hasShareData) {
         tbody.innerHTML = '<tr><td colspan="4" class="no-data">No commission data available</td></tr>';
         return;
     }
 
     let tableHTML = '';
 
-    // Monthly Paid Commission Carriers
-    if (Object.keys(monthlyPaidCarriers).length > 0) {
-        tableHTML += '<tr style="background-color: #e3f2fd; font-weight: bold;"><td colspan="4">📅 Monthly Paid Commission Carriers</td></tr>';
-        Object.entries(monthlyPaidCarriers).forEach(([carrier, months]) => {
+    const renderCarrierRows = (carriers, header, color) => {
+        if (Object.keys(carriers).length === 0) return;
+        tableHTML += `<tr style="background-color: ${color}; font-weight: bold;"><td colspan="4">${header}</td></tr>`;
+        Object.entries(carriers).forEach(([carrier, months]) => {
             Object.entries(months).forEach(([month, entry], idx) => {
                 const amount = typeof entry === 'object' ? entry.amount : entry;
                 const lob = typeof entry === 'object' ? entry.lob : '-';
                 const rate = typeof entry === 'object' ? entry.rate : 0;
                 const premium = typeof entry === 'object' ? entry.premium : 0;
-                let commissionDisplay = `$${amount.toFixed(2)}`;
-                if (premium > 0 && rate > 0) {
-                    commissionDisplay = `$${premium.toFixed(2)}×${rate}%=$${amount.toFixed(2)}`;
-                }
-                tableHTML += `<tr>
-                    <td>${idx === 0 ? carrier : ''}</td>
-                    <td>${lob}</td>
-                    <td>${month}</td>
-                    <td style="font-family: monospace; font-size: 0.95em;">${commissionDisplay}</td>
-                </tr>`;
+                const display = premium > 0 && rate > 0 ? `$${premium.toFixed(2)}×${rate}%=$${amount.toFixed(2)}` : `$${amount.toFixed(2)}`;
+                tableHTML += `<tr><td>${idx === 0 ? carrier : ''}</td><td>${lob}</td><td>${month}</td><td style="font-family: monospace; font-size: 0.95em;">${display}</td></tr>`;
             });
         });
-    }
+    };
 
-    // Gross Paid Carriers
-    if (Object.keys(grossPaidCarriers).length > 0) {
-        tableHTML += '<tr style="background-color: #f3e5f5; font-weight: bold;"><td colspan="4">💰 Gross Paid Carriers</td></tr>';
-        Object.entries(grossPaidCarriers).forEach(([carrier, months]) => {
-            Object.entries(months).forEach(([month, entry], idx) => {
-                const amount = typeof entry === 'object' ? entry.amount : entry;
-                const lob = typeof entry === 'object' ? entry.lob : '-';
-                const rate = typeof entry === 'object' ? entry.rate : 0;
-                const premium = typeof entry === 'object' ? entry.premium : 0;
-                let commissionDisplay = `$${amount.toFixed(2)}`;
-                if (premium > 0 && rate > 0) {
-                    commissionDisplay = `$${premium.toFixed(2)}×${rate}%=$${amount.toFixed(2)}`;
-                }
-                tableHTML += `<tr>
-                    <td>${idx === 0 ? carrier : ''}</td>
-                    <td>${lob}</td>
-                    <td>${month}</td>
-                    <td style="font-family: monospace; font-size: 0.95em;">${commissionDisplay}</td>
-                </tr>`;
-            });
+    renderCarrierRows(monthlyPaidCarriers, '📅 Monthly Paid Commission Carriers', '#e3f2fd');
+    renderCarrierRows(grossPaidCarriers, '💰 Gross Paid Carriers', '#f3e5f5');
+
+    if (hasShareData) {
+        tableHTML += `<tr style="background-color: #e8f5e9; font-weight: bold;"><td colspan="4">🤝 Agent Commission (50% of Agency Commission)</td></tr>`;
+        Object.entries(agentShares).forEach(([month, data]) => {
+            tableHTML += `<tr>
+                <td>Agency Commission</td>
+                <td>${data.count} polic${data.count === 1 ? 'y' : 'ies'}</td>
+                <td>${month}</td>
+                <td style="font-family: monospace; font-size: 0.95em;">$${data.agencyTotal.toFixed(2)}×50%=<strong>$${data.total.toFixed(2)}</strong></td>
+            </tr>`;
         });
     }
 
@@ -1456,6 +1446,17 @@ function exportAgentCommissions() {
                 csvLines.push(`${carrier},${lob},${month},$${amount.toFixed(2)}`);
                 totalAll += amount;
             });
+        });
+        csvLines.push('');
+    }
+
+    const agentShares = getAgentCommissionShares(agent);
+    if (Object.keys(agentShares).length > 0) {
+        csvLines.push('AGENT COMMISSION (50% OF AGENCY COMMISSION)');
+        csvLines.push('Month,Policies,Agency Commission,Agent Share (50%)');
+        Object.entries(agentShares).forEach(([month, data]) => {
+            csvLines.push(`${month},${data.count},$${data.agencyTotal.toFixed(2)},$${data.total.toFixed(2)}`);
+            totalAll += data.total;
         });
         csvLines.push('');
     }
