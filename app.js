@@ -153,6 +153,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById(id)?.addEventListener('input', calculateAgentCommission);
     });
 
+    // Auto-calculate carrier commission when key fields change
+    ['basePremium', 'company', 'lineOfBusiness', 'paymentType'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', autoCalculateCommission);
+        document.getElementById(id)?.addEventListener('input', autoCalculateCommission);
+    });
+
     // Sync from Drive in background — won't block the UI
     syncFromDrive().then(() => {
         initializeAgentButtons(); // Refresh agent buttons after sync
@@ -168,6 +174,54 @@ function calculateAgentCommission() {
     const agentShare = parseFloat(((fee + commission) * 0.5).toFixed(2));
     const field = document.getElementById('agentCommission');
     if (field) field.value = agentShare > 0 ? agentShare : '';
+}
+
+function autoCalculateCommission() {
+    const basePremium  = parseFloat(document.getElementById('basePremium')?.value) || 0;
+    const carrier      = document.getElementById('company')?.value;
+    const lob          = document.getElementById('lineOfBusiness')?.value;
+    const paymentType  = document.getElementById('paymentType')?.value;
+
+    const rateLabel    = document.getElementById('commissionRateLabel');
+    const breakdown    = document.getElementById('commissionBreakdown');
+
+    if (!carrier || !lob || !paymentType || basePremium <= 0) {
+        if (rateLabel)  { rateLabel.style.display  = 'none'; rateLabel.textContent = ''; }
+        if (breakdown)  { breakdown.style.display  = 'none'; breakdown.textContent = ''; }
+        return;
+    }
+
+    const rate = getCommissionRate(carrier, lob, paymentType);
+
+    if (rate > 0) {
+        const commission = parseFloat((basePremium * (rate / 100)).toFixed(2));
+
+        // Populate the Agency Commission field
+        const commField = document.getElementById('agencyCommission');
+        if (commField) commField.value = commission;
+
+        // Show the rate label and breakdown
+        if (rateLabel) {
+            rateLabel.textContent = `— Auto: ${rate}% carrier rate`;
+            rateLabel.style.display = 'inline';
+        }
+        if (breakdown) {
+            breakdown.innerHTML = `💡 $${basePremium.toLocaleString()} × ${rate}% = <strong>$${commission.toLocaleString()}</strong>`;
+            breakdown.style.display = 'block';
+        }
+
+        // Recalculate agent share
+        calculateAgentCommission();
+    } else {
+        if (rateLabel) {
+            rateLabel.textContent = '— No rule set for this carrier/LOB';
+            rateLabel.style.display = 'inline';
+            rateLabel.style.color = '#e65100';
+        }
+        if (breakdown) {
+            breakdown.style.display = 'none';
+        }
+    }
 }
 
 function initializeAgentButtons() {
@@ -331,8 +385,8 @@ function saveEntry() {
     allData.push(entry);
     localStorage.setItem('binderData', JSON.stringify(allData));
 
-    // Calculate and store commission
-    const premium = entry.totalPremium;
+    // Calculate and store commission based on base premium
+    const premium = entry.basePremium;
     const carrier = entry.company;
     const lob = entry.lineOfBusiness;
     const paymentType = entry.paymentType || 'Monthly Paid';
