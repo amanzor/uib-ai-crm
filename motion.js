@@ -27,11 +27,11 @@
     // 1. HEADER — fade + drift down on first load
     // ─────────────────────────────────────────────────────────────
     function animateHeader() {
-        const h1 = document.querySelector('header h1');
-        const p  = document.querySelector('header p');
-        if (!h1) return;
+        const brand = document.querySelector('.header-brand');
+        const p     = document.querySelector('header p');
+        if (!brand) return;
 
-        animate(h1, { opacity: [0, 1], transform: ['translateY(-10px)', 'translateY(0)'] },
+        animate(brand, { opacity: [0, 1], transform: ['translateY(-10px)', 'translateY(0)'] },
             { duration: 0.55, easing: EASE_OUT });
 
         if (p) animate(p, { opacity: [0, 0.65] }, { duration: 0.5, delay: 0.18 });
