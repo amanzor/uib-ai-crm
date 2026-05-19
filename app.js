@@ -2,7 +2,7 @@
 // GOOGLE DRIVE SYNC
 // ============================================================
 const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbypm1A3G5Wgf4onwSU-yk6FbmTOA-9in7HcFrg0YWL6UBdhNj4di7yVDNlflLYwaehI/exec";
-const SYNC_KEYS = ['binderData', 'agentMasterData', 'commissionData', 'carrierMasterData', 'agentCredentials', 'prospectData'];
+const SYNC_KEYS = ['binderData', 'agentMasterData', 'commissionData', 'carrierMasterData', 'agentCredentials', 'prospectData', 'verificationLogs'];
 
 async function driveGet(key) {
     try {
@@ -548,6 +548,245 @@ function saveEntry() {
     closeDailySalesModal();
     setTodayDate();
     loadAgentData();
+}
+
+// ── Daily Verification Log ────────────────────────────────────
+const _vlSigPads = {};
+
+function openDailyVerificationModal() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('vl_date').value = today;
+
+    // Populate agent dropdown
+    const sel = document.getElementById('vl_agent');
+    const agents = Object.keys(JSON.parse(localStorage.getItem('agentMasterData')) || {}).sort();
+    sel.innerHTML = '<option value="">Select Agent</option>' +
+        agents.map(a => `<option value="${a}">${a}</option>`).join('');
+
+    document.getElementById('verificationSuccessMsg').style.display = 'none';
+    document.getElementById('dailyVerificationModal').classList.add('active');
+
+    // Init signature pads (after modal is visible so canvas has dimensions)
+    setTimeout(() => {
+        initSignaturePad('vl_customerSigCanvas');
+        initSignaturePad('vl_agentSigCanvas');
+    }, 100);
+
+    // Sync agent name when dropdown changes
+    document.getElementById('vl_agent').onchange = function() {
+        document.getElementById('vl_verifiedBy').value = this.value;
+    };
+}
+
+function closeDailyVerificationModal() {
+    document.getElementById('dailyVerificationModal').classList.remove('active');
+    resetVerificationForm();
+}
+
+function resetVerificationForm() {
+    document.getElementById('verificationForm').reset();
+    clearSignaturePad('vl_customerSigCanvas');
+    clearSignaturePad('vl_agentSigCanvas');
+    document.getElementById('vl_verifiedBy').value = '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('vl_date').value = today;
+}
+
+function initSignaturePad(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#003399';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    let drawing = false;
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        return {
+            x: (src.clientX - rect.left) * scaleX,
+            y: (src.clientY - rect.top)  * scaleY
+        };
+    }
+
+    function start(e) { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+    function move(e)  { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+    function stop()   { drawing = false; }
+
+    // Remove old listeners before re-adding
+    const clone = canvas.cloneNode(true);
+    canvas.parentNode.replaceChild(clone, canvas);
+    const c = document.getElementById(canvasId);
+    const cx = c.getContext('2d');
+    cx.strokeStyle = '#003399'; cx.lineWidth = 2; cx.lineCap = 'round'; cx.lineJoin = 'round';
+
+    function getPos2(e) {
+        const rect = c.getBoundingClientRect();
+        const scaleX = c.width / rect.width;
+        const scaleY = c.height / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+    }
+    let d = false;
+    c.addEventListener('mousedown',  e => { d = true; const p = getPos2(e); cx.beginPath(); cx.moveTo(p.x, p.y); });
+    c.addEventListener('mousemove',  e => { if (!d) return; const p = getPos2(e); cx.lineTo(p.x, p.y); cx.stroke(); });
+    c.addEventListener('mouseup',    () => d = false);
+    c.addEventListener('mouseleave', () => d = false);
+    c.addEventListener('touchstart', e => { e.preventDefault(); d = true; const p = getPos2(e); cx.beginPath(); cx.moveTo(p.x, p.y); }, { passive: false });
+    c.addEventListener('touchmove',  e => { e.preventDefault(); if (!d) return; const p = getPos2(e); cx.lineTo(p.x, p.y); cx.stroke(); }, { passive: false });
+    c.addEventListener('touchend',   () => d = false);
+}
+
+function clearSignaturePad(canvasId) {
+    const c = document.getElementById(canvasId);
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+}
+
+function isCanvasBlank(canvasId) {
+    const c = document.getElementById(canvasId);
+    if (!c) return true;
+    const data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    return !data.some(v => v !== 0);
+}
+
+function saveVerificationLog(e) {
+    e.preventDefault();
+
+    if (isCanvasBlank('vl_customerSigCanvas')) {
+        alert('Please provide the customer signature.');
+        return;
+    }
+    if (isCanvasBlank('vl_agentSigCanvas')) {
+        alert('Please provide the agent/CSR signature.');
+        return;
+    }
+
+    const date          = document.getElementById('vl_date').value;
+    const agent         = document.getElementById('vl_agent').value;
+    const customerName  = document.getElementById('vl_customerName').value.trim();
+    const ack           = document.querySelector('input[name="vl_ack"]:checked')?.value;
+    const permission    = document.querySelector('input[name="vl_permission"]:checked')?.value;
+    const agentConfirm  = document.querySelector('input[name="vl_agentConfirm"]:checked')?.value;
+    const customerSig   = document.getElementById('vl_customerSigCanvas').toDataURL('image/png');
+    const agentSig      = document.getElementById('vl_agentSigCanvas').toDataURL('image/png');
+
+    const entry = {
+        id:            'VL-' + Date.now(),
+        date,
+        customerName,
+        agent,
+        acknowledged:  ack,
+        permissionToFollowUp: permission,
+        agentConfirmed: agentConfirm,
+        customerSig,
+        agentSig,
+        timestamp:     new Date().toISOString()
+    };
+
+    const logs = JSON.parse(localStorage.getItem('verificationLogs')) || [];
+    logs.push(entry);
+    localStorage.setItem('verificationLogs', JSON.stringify(logs));
+
+    // Generate and download the completed form
+    downloadVerificationForm(entry);
+
+    document.getElementById('verificationSuccessMsg').style.display = 'block';
+    setTimeout(() => {
+        document.getElementById('verificationSuccessMsg').style.display = 'none';
+        closeDailyVerificationModal();
+    }, 2500);
+}
+
+function downloadVerificationForm(entry) {
+    const formatted = new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verification Log - ${entry.customerName} - ${entry.date}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #222; padding: 40px; max-width: 720px; margin: 0 auto; }
+  .logo-area { text-align:center; margin-bottom:28px; }
+  .logo-area h1 { font-size:20px; color:#003399; letter-spacing:1px; }
+  .logo-area p  { font-size:11px; color:#555; margin-top:4px; }
+  h2 { font-size:14px; text-align:center; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; color:#003399; border-bottom:2px solid #003399; padding-bottom:6px; }
+  .section { border:1px solid #ccc; border-radius:6px; padding:20px; margin-bottom:24px; }
+  .legal { font-size:12.5px; line-height:1.75; text-align:justify; }
+  .legal p { margin-bottom:10px; }
+  .field-row { display:flex; gap:40px; margin-top:20px; flex-wrap:wrap; }
+  .field { flex:1; min-width:200px; }
+  .field label { font-size:12px; font-weight:bold; display:block; margin-bottom:4px; }
+  .field .line { border-bottom:1px solid #333; height:24px; }
+  .sig-img { max-width:100%; height:60px; border-bottom:1px solid #333; display:block; }
+  .yn { font-size:13px; margin-top:12px; }
+  .yn span { display:inline-block; width:90px; border-bottom:1px solid #333; margin-right:16px; text-align:center; padding-bottom:2px; }
+  .meta { text-align:right; font-size:11px; color:#777; margin-bottom:20px; }
+  @media print { body { padding:20px; } }
+</style>
+</head>
+<body>
+<div class="logo-area">
+  <h1>Universal Insurance Brokers</h1>
+  <p>Licensed Insurance Agency — State of Florida</p>
+</div>
+<p class="meta">Date: ${formatted} &nbsp;|&nbsp; Agent/CSR: ${entry.agent} &nbsp;|&nbsp; Entry ID: ${entry.id}</p>
+
+<!-- Form 1 -->
+<div class="section">
+  <h2>Notice and Customer Acknowledgement Form</h2>
+  <div class="legal">
+    <p><strong>Gunther Volkswagen of Coconut Creek</strong> and <strong>Universal Insurance Brokers</strong> wish to inform you that there is no affiliation or other connection between <strong>Universal Insurance Brokers</strong> and <strong>Gunther Volkswagen of Coconut Creek</strong>. <strong>Gunther Volkswagen of Coconut Creek</strong> leases floor space to <strong>Universal Insurance Brokers</strong>, which is an independently owned and operated, licensed insurance agency doing business in the State of Florida. The purpose of <strong>Universal Insurance Brokers</strong> is to help their clients with their insurance transfer or provide options if none exists. Representatives of <strong>Universal Insurance Brokers</strong> are not employees or agents of and have no affiliation or connection with <strong>Gunther Volkswagen of Coconut Creek</strong>.</p>
+    <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not require any of its customers to obtain insurance coverage from <strong>Universal Insurance Brokers</strong>, or any other particular insurer, agent, or broker. <strong>Gunther Volkswagen of Coconut Creek</strong> does not negotiate any insurance policy through <strong>Universal Insurance Brokers</strong>, or any other insurer, agent, or broker. The choice of a particular insurer, agent, or broker, and the negotiation of any insurance policy, is entirely for you, the Customer, to make.</p>
+    <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not receive any fee, commission, royalty, percentage, or similar payment from any revenue that <strong>Universal Insurance Brokers</strong> earns from the sale or servicing of any insurance policy or any other insurance product.</p>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Customer Name</label><div class="line" style="padding-top:4px;">${entry.customerName}</div></div>
+    <div class="field"><label>Customer Acknowledges</label><div class="line" style="padding-top:4px;">${entry.acknowledged}</div></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Customer Signature</label><img src="${entry.customerSig}" class="sig-img" alt="Customer Signature"></div>
+  </div>
+</div>
+
+<!-- Form 2 -->
+<div class="section">
+  <h2>Permission Form</h2>
+  <div class="legal">
+    <p>"I consent and agree that <strong>Universal Insurance Brokers</strong> (and its affiliates, agents and assigns) may contact me by telephone at any telephone number associated with my account that I provide now or in the future, including cellular phones, wireless telephone numbers or any other wireless devices, regardless of whether I incur charges as a result. I expressly consent and agree to <strong>Universal Insurance Brokers</strong> and its affiliates, agents and assigns, contacting me by the following methods including, but not limited to, any telephone dialing system, sending text messages or e-mails using any e-mail address I provide now or in the future, using manual calling methods, pre-recorded/artificial voice messages and/or use of an automatic dialing device or system, as applicable. I understand that my consent is not a condition of purchase."</p>
+  </div>
+  <p class="yn" style="margin-top:16px;"><strong>Permission to follow up:</strong> &nbsp; ${entry.permissionToFollowUp === 'Yes' ? '<span>✓ Yes</span>' : '<span>Yes</span>'} ${entry.permissionToFollowUp === 'No' ? '<span>✓ No</span>' : '<span>No</span>'}</p>
+  <div class="field-row" style="margin-top:20px;">
+    <div class="field"><label>Customer Name</label><div class="line" style="padding-top:4px;">${entry.customerName}</div></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Customer Signature</label><img src="${entry.customerSig}" class="sig-img" alt="Customer Signature"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Verified By</label><div class="line" style="padding-top:4px;">${entry.agent}</div></div>
+    <div class="field"><label>Agent/CSR Signature Dated</label><div class="line" style="padding-top:4px;">${formatted}</div></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Agent / CSR Signature</label><img src="${entry.agentSig}" class="sig-img" alt="Agent Signature"></div>
+  </div>
+  <p class="yn" style="margin-top:16px;"><strong>Agent/CSR confirms forms presented:</strong> &nbsp; ${entry.agentConfirmed === 'Yes' ? '<span>✓ Yes</span>' : '<span>Yes</span>'} ${entry.agentConfirmed === 'No' ? '<span>✓ No</span>' : '<span>No</span>'}</p>
+</div>
+
+<script>window.onload = () => window.print();<\/script>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `VerificationLog-${entry.customerName.replace(/\s+/g,'-')}-${entry.date}.html`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ── New Prospect ──────────────────────────────────────────────

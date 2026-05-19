@@ -609,6 +609,7 @@
                     <div class="agent-list" id="agentList"></div>
                     <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
                         <button class="btn-success" onclick="openNewProspectModal()">🌟 New Prospect</button>
+                        <button class="btn-secondary" onclick="openDailyVerificationModal()" style="background:#6c3483;border-color:#6c3483;color:white;">📋 Daily Verification Log</button>
                         <button class="btn-primary" onclick="showAdminLogin()">Admin Login</button>
                     </div>
                 </div>
@@ -714,6 +715,114 @@
                         <div class="form-actions" style="margin-top:20px;">
                             <button type="submit" class="btn-success">💾 Save Prospect</button>
                             <button type="reset" class="btn-primary">Clear Form</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Daily Verification Log Modal -->
+            <div id="dailyVerificationModal" class="modal">
+                <div class="modal-content" style="max-width:780px; max-height:92vh; overflow-y:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0; color:#6c3483;">📋 Daily Verification Log</h3>
+                        <button type="button" class="btn-danger btn-sm" onclick="closeDailyVerificationModal()">✕ Close</button>
+                    </div>
+
+                    <div id="verificationSuccessMsg" style="display:none; background:#d1fae5; color:#065f46; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-weight:600;">
+                        ✓ Verification log saved and form downloaded!
+                    </div>
+
+                    <form id="verificationForm" onsubmit="saveVerificationLog(event)">
+
+                        <!-- Header Info -->
+                        <div class="form-grid" style="margin-bottom:20px;">
+                            <div class="form-group">
+                                <label>Date *</label>
+                                <input type="date" id="vl_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Agent / CSR *</label>
+                                <select id="vl_agent" required>
+                                    <option value="">Select Agent</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- ─── FORM 1: Notice & Acknowledgement ─── -->
+                        <div style="border:2px solid #003399; border-radius:8px; padding:20px; margin-bottom:24px; background:#f8f9ff;">
+                            <h4 style="text-align:center; color:#003399; font-size:1em; margin:0 0 14px 0; text-transform:uppercase; letter-spacing:0.5px;">Notice and Customer Acknowledgement Form</h4>
+                            <div style="font-size:13px; line-height:1.7; color:#333; text-align:justify;">
+                                <p><strong>Gunther Volkswagen of Coconut Creek</strong> and <strong>Universal Insurance Brokers</strong> wish to inform you that there is no affiliation or other connection between <strong>Universal Insurance Brokers</strong> and <strong>Gunther Volkswagen of Coconut Creek</strong>. <strong>Gunther Volkswagen of Coconut Creek</strong> leases floor space to <strong>Universal Insurance Brokers</strong>, which is an independently owned and operated, licensed insurance agency doing business in the State of Florida. The purpose of <strong>Universal Insurance Brokers</strong> is to help their clients with their insurance transfer or provide options if none exists. Representatives of <strong>Universal Insurance Brokers</strong> are not employees or agents of and have no affiliation or connection with <strong>Gunther Volkswagen of Coconut Creek</strong>.</p>
+                                <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not require any of its customers to obtain insurance coverage from <strong>Universal Insurance Brokers</strong>, or any other particular insurer, agent, or broker. <strong>Gunther Volkswagen of Coconut Creek</strong> does not negotiate any insurance policy through <strong>Universal Insurance Brokers</strong>, or any other insurer, agent, or broker. The choice of a particular insurer, agent, or broker, and the negotiation of any insurance policy, is entirely for you, the Customer, to make.</p>
+                                <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not receive any fee, commission, royalty, percentage, or similar payment from any revenue that <strong>Universal Insurance Brokers</strong> earns from the sale or servicing of any insurance policy or any other insurance product.</p>
+                            </div>
+                            <div style="margin-top:14px; display:flex; align-items:center; gap:16px;">
+                                <strong style="font-size:13px;">Customer acknowledges:</strong>
+                                <label style="font-size:13px; font-weight:normal; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                    <input type="radio" name="vl_ack" value="Yes" required> Yes
+                                </label>
+                                <label style="font-size:13px; font-weight:normal; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                    <input type="radio" name="vl_ack" value="No"> No
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- ─── FORM 2: Permission Form ─── -->
+                        <div style="border:2px solid #003399; border-radius:8px; padding:20px; margin-bottom:24px; background:#f8f9ff;">
+                            <h4 style="text-align:center; color:#003399; font-size:1em; margin:0 0 14px 0; text-transform:uppercase; letter-spacing:0.5px;">Permission Form</h4>
+                            <div style="font-size:13px; line-height:1.7; color:#333; text-align:justify;">
+                                <p>"I consent and agree that <strong>Universal Insurance Brokers</strong> (and its affiliates, agents and assigns) may contact me by telephone at any telephone number associated with my account that I provide now or in the future, including cellular phones, wireless telephone numbers or any other wireless devices, regardless of whether I incur charges as a result. I expressly consent and agree to <strong>Universal Insurance Brokers</strong> and its affiliates, agents and assigns, contacting me by the following methods including, but not limited to, any telephone dialing system, sending text messages or e-mails using any e-mail address I provide now or in the future, using manual calling methods, pre-recorded/artificial voice messages and/or use of an automatic dialing device or system, as applicable. I understand that my consent is not a condition of purchase."</p>
+                            </div>
+                            <div style="margin-top:14px; display:flex; align-items:center; gap:16px;">
+                                <strong style="font-size:13px;">Permission to follow up:</strong>
+                                <label style="font-size:13px; font-weight:normal; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                    <input type="radio" name="vl_permission" value="Yes" required> Yes
+                                </label>
+                                <label style="font-size:13px; font-weight:normal; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                    <input type="radio" name="vl_permission" value="No"> No
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- ─── Signatures ─── -->
+                        <div style="border:1px solid #ddd; border-radius:8px; padding:20px; margin-bottom:20px;">
+                            <h4 style="color:#333; margin:0 0 18px 0; font-size:0.95em; text-transform:uppercase; letter-spacing:0.5px;">Customer Information & Signature</h4>
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label>Customer Name *</label>
+                                <input type="text" id="vl_customerName" required placeholder="Full name">
+                            </div>
+                            <div style="margin-bottom:6px;"><label style="font-size:14px; font-weight:600; color:#555;">Customer Signature *</label></div>
+                            <div style="border:1px solid #ccc; border-radius:6px; background:white; position:relative;">
+                                <canvas id="vl_customerSigCanvas" width="700" height="120" style="width:100%; height:120px; display:block; cursor:crosshair; touch-action:none; border-radius:6px;"></canvas>
+                            </div>
+                            <button type="button" onclick="clearSignaturePad('vl_customerSigCanvas')" style="margin-top:6px; padding:4px 12px; font-size:12px; background:#f5f5f5; border:1px solid #ccc; border-radius:4px; cursor:pointer;">🗑 Clear Signature</button>
+                        </div>
+
+                        <div style="border:1px solid #ddd; border-radius:8px; padding:20px; margin-bottom:24px;">
+                            <h4 style="color:#333; margin:0 0 18px 0; font-size:0.95em; text-transform:uppercase; letter-spacing:0.5px;">Agent / CSR Verification</h4>
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label>Verified By</label>
+                                <input type="text" id="vl_verifiedBy" readonly style="background:#f0f0f0; cursor:not-allowed;">
+                            </div>
+                            <div style="margin-bottom:6px;"><label style="font-size:14px; font-weight:600; color:#555;">Agent / CSR Signature *</label></div>
+                            <div style="border:1px solid #ccc; border-radius:6px; background:white; position:relative;">
+                                <canvas id="vl_agentSigCanvas" width="700" height="120" style="width:100%; height:120px; display:block; cursor:crosshair; touch-action:none; border-radius:6px;"></canvas>
+                            </div>
+                            <button type="button" onclick="clearSignaturePad('vl_agentSigCanvas')" style="margin-top:6px; padding:4px 12px; font-size:12px; background:#f5f5f5; border:1px solid #ccc; border-radius:4px; cursor:pointer;">🗑 Clear Signature</button>
+                            <div style="margin-top:16px; display:flex; align-items:center; gap:16px;">
+                                <strong style="font-size:13px;">Agent/CSR confirms forms presented:</strong>
+                                <label style="font-size:13px; font-weight:normal; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                    <input type="radio" name="vl_agentConfirm" value="Yes" required> Yes
+                                </label>
+                                <label style="font-size:13px; font-weight:normal; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                    <input type="radio" name="vl_agentConfirm" value="No"> No
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-success">💾 Save &amp; Download Form</button>
+                            <button type="button" class="btn-primary" onclick="resetVerificationForm()">Clear Form</button>
                         </div>
                     </form>
                 </div>
