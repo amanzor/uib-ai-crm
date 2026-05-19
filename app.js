@@ -86,46 +86,49 @@ let allData = JSON.parse(localStorage.getItem('binderData')) || [];
 let carrierMasterData = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
 
 // ── Eastern Time helpers ──────────────────────────────────────
-// Returns "YYYY-MM-DD" in America/New_York time
+const _ET = 'America/New_York';
+
+// Returns "YYYY-MM-DD" in ET  (used for date inputs)
 function getEasternDateString() {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: _ET }).formatToParts(new Date());
+    const get = t => p.find(x => x.type === t).value;
+    return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-// Returns a human-readable timestamp in Eastern Time, e.g. "05/18/2026, 03:45:00 PM ET"
+// Returns "05/18/2026, 9:47 PM ET"  (stored with each entry)
 function getEasternTimestamp() {
-    return new Date().toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: true
-    }) + ' ET';
+    const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: _ET,
+        month: '2-digit', day: '2-digit', year: 'numeric',
+        hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+    }).formatToParts(new Date());
+    const get = t => p.find(x => x.type === t).value;
+    return `${get('month')}/${get('day')}/${get('year')}, ${get('hour')}:${get('minute')}:${get('second')} ${get('dayPeriod')} ET`;
 }
 
-// Returns "May 2026" (or whichever month) in Eastern Time
+// Returns "May 2026" in ET
 function getEasternMonthYear() {
-    return new Date().toLocaleDateString('en-US', {
-        timeZone: 'America/New_York',
-        year: 'numeric', month: 'long'
-    });
+    const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: _ET, month: 'long', year: 'numeric'
+    }).formatToParts(new Date());
+    const get = t => p.find(x => x.type === t).value;
+    return `${get('month')} ${get('year')}`;
 }
 
-// Returns the 4-digit year in Eastern Time
+// Returns the 4-digit year in ET
 function getEasternYear() {
-    return parseInt(new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).split('-')[0], 10);
+    return parseInt(new Intl.DateTimeFormat('en-CA', { timeZone: _ET }).formatToParts(new Date()).find(x => x.type === 'year').value, 10);
 }
 
-// Returns a display-friendly date+time string, e.g. "05/18/2026  3:45 PM ET"
+// Returns "05/18/2026  9:47 PM ET"  (shown in readonly fields)
 function getEasternDateTimeDisplay() {
-    const now = new Date();
-    const date = now.toLocaleDateString('en-US', {
-        timeZone: 'America/New_York',
-        month: '2-digit', day: '2-digit', year: 'numeric'
-    });
-    const time = now.toLocaleTimeString('en-US', {
-        timeZone: 'America/New_York',
+    const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: _ET,
+        month: '2-digit', day: '2-digit', year: 'numeric',
         hour: 'numeric', minute: '2-digit', hour12: true
-    });
-    return `${date}  ${time} ET`;
+    }).formatToParts(new Date());
+    const get = t => p.find(x => x.type === t).value;
+    return `${get('month')}/${get('day')}/${get('year')}  ${get('hour')}:${get('minute')} ${get('dayPeriod')} ET`;
 }
 
 // ── All Lines of Business — matches the policy entry dropdown ─
