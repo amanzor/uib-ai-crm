@@ -607,7 +607,115 @@
                 <div class="login-container">
                     <h2>Select Your Account</h2>
                     <div class="agent-list" id="agentList"></div>
-                    <button class="btn-primary" onclick="showAdminLogin()">Admin Login</button>
+                    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
+                        <button class="btn-success" onclick="openNewProspectModal()">🌟 New Prospect</button>
+                        <button class="btn-primary" onclick="showAdminLogin()">Admin Login</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Prospect Modal -->
+            <div id="newProspectModal" class="modal">
+                <div class="modal-content" style="max-width:700px; max-height:90vh; overflow-y:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0;">🌟 New Prospect</h3>
+                        <button type="button" class="btn-danger btn-sm" onclick="closeNewProspectModal()">✕ Close</button>
+                    </div>
+                    <div id="prospectSuccessMsg" style="display:none; background:#d1fae5; color:#065f46; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-weight:600;">
+                        ✓ Prospect saved successfully!
+                    </div>
+                    <form id="prospectForm" onsubmit="saveProspect(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>First Name *</label>
+                                <input type="text" id="prospectFirstName" required placeholder="John">
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name *</label>
+                                <input type="text" id="prospectLastName" required placeholder="Doe">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="prospectPhone" placeholder="(555) 123-4567">
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="prospectEmail" placeholder="john@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Line of Business Interested In</label>
+                                <select id="prospectLOB">
+                                    <option value="">Select Line</option>
+                                    <option value="BOP">BOP</option>
+                                    <option value="Boat">Boat</option>
+                                    <option value="Builders Risk">Builders Risk</option>
+                                    <option value="Business Owner">Business Owner</option>
+                                    <option value="Classic Collectors">Classic Collectors</option>
+                                    <option value="Commercial Auto">Commercial Auto</option>
+                                    <option value="Commercial Property">Commercial Property</option>
+                                    <option value="Excess Liability">Excess Liability</option>
+                                    <option value="Flood">Flood</option>
+                                    <option value="Garage Keepers">Garage Keepers</option>
+                                    <option value="General Liability">General Liability</option>
+                                    <option value="Home Owners DP1">Home Owners DP1</option>
+                                    <option value="Home Owners DP2">Home Owners DP2</option>
+                                    <option value="Home Owners DP3">Home Owners DP3</option>
+                                    <option value="Home Owners H3">Home Owners H3</option>
+                                    <option value="Home Owners H4">Home Owners H4</option>
+                                    <option value="Home Owners H6">Home Owners H6</option>
+                                    <option value="Home Owners H8">Home Owners H8</option>
+                                    <option value="Inland Marine">Inland Marine</option>
+                                    <option value="Motorcycle/ATV">Motorcycle/ATV</option>
+                                    <option value="Personal Auto">Personal Auto</option>
+                                    <option value="Professional Liability">Professional Liability</option>
+                                    <option value="Surety Bond">Surety Bond</option>
+                                    <option value="Trucking">Trucking</option>
+                                    <option value="Umbrella">Umbrella</option>
+                                    <option value="Workers Comp">Workers Comp</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Source</label>
+                                <select id="prospectSource">
+                                    <option value="">Select Source</option>
+                                    <option value="Referral">Referral</option>
+                                    <option value="Walk-In">Walk-In</option>
+                                    <option value="Online">Online</option>
+                                    <option value="Phone">Phone</option>
+                                    <option value="Repeat Client">Repeat Client</option>
+                                    <option value="Social Media">Social Media</option>
+                                    <option value="Agent Referral">Agent Referral</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Referred By</label>
+                                <input type="text" id="prospectReferredBy" placeholder="Name of referrer">
+                            </div>
+                            <div class="form-group">
+                                <label>Assigned Agent</label>
+                                <select id="prospectAgent">
+                                    <option value="">Select Agent</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Follow-Up Date</label>
+                                <input type="date" id="prospectFollowUpDate">
+                            </div>
+                            <div class="form-group">
+                                <label>Date Added</label>
+                                <input type="date" id="prospectDateAdded" readonly style="background:#f0f0f0; cursor:not-allowed;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:8px;">
+                            <label>Notes</label>
+                            <textarea id="prospectNotes" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-size:14px; resize:vertical;" placeholder="Additional notes about this prospect..."></textarea>
+                        </div>
+                        <div class="form-actions" style="margin-top:20px;">
+                            <button type="submit" class="btn-success">💾 Save Prospect</button>
+                            <button type="reset" class="btn-primary">Clear Form</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 

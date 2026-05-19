@@ -2,7 +2,7 @@
 // GOOGLE DRIVE SYNC
 // ============================================================
 const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbypm1A3G5Wgf4onwSU-yk6FbmTOA-9in7HcFrg0YWL6UBdhNj4di7yVDNlflLYwaehI/exec";
-const SYNC_KEYS = ['binderData', 'agentMasterData', 'commissionData', 'carrierMasterData', 'agentCredentials'];
+const SYNC_KEYS = ['binderData', 'agentMasterData', 'commissionData', 'carrierMasterData', 'agentCredentials', 'prospectData'];
 
 async function driveGet(key) {
     try {
@@ -550,6 +550,59 @@ function saveEntry() {
     loadAgentData();
 }
 
+// ── New Prospect ──────────────────────────────────────────────
+function openNewProspectModal() {
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('prospectDateAdded').value = today;
+
+    // Populate agent dropdown from agentMasterData
+    const agentSelect = document.getElementById('prospectAgent');
+    const agents = Object.keys(JSON.parse(localStorage.getItem('agentMasterData')) || {}).sort();
+    agentSelect.innerHTML = '<option value="">Select Agent</option>' +
+        agents.map(a => `<option value="${a}">${a}</option>`).join('');
+
+    document.getElementById('prospectSuccessMsg').style.display = 'none';
+    document.getElementById('newProspectModal').classList.add('active');
+}
+
+function closeNewProspectModal() {
+    document.getElementById('newProspectModal').classList.remove('active');
+    document.getElementById('prospectForm').reset();
+    document.getElementById('prospectSuccessMsg').style.display = 'none';
+}
+
+function saveProspect(e) {
+    e.preventDefault();
+    const prospect = {
+        id:          'PROS-' + Date.now(),
+        firstName:   document.getElementById('prospectFirstName').value.trim(),
+        lastName:    document.getElementById('prospectLastName').value.trim(),
+        phone:       document.getElementById('prospectPhone').value.trim(),
+        email:       document.getElementById('prospectEmail').value.trim(),
+        lob:         document.getElementById('prospectLOB').value,
+        source:      document.getElementById('prospectSource').value,
+        referredBy:  document.getElementById('prospectReferredBy').value.trim(),
+        agent:       document.getElementById('prospectAgent').value,
+        followUpDate:document.getElementById('prospectFollowUpDate').value,
+        dateAdded:   document.getElementById('prospectDateAdded').value,
+        notes:       document.getElementById('prospectNotes').value.trim(),
+        status:      'Open'
+    };
+
+    const prospects = JSON.parse(localStorage.getItem('prospectData')) || [];
+    prospects.push(prospect);
+    localStorage.setItem('prospectData', JSON.stringify(prospects));
+
+    document.getElementById('prospectForm').reset();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('prospectDateAdded').value = today;
+    const msg = document.getElementById('prospectSuccessMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
+
+// ── Daily Sales Entry Modal ────────────────────────────────────
 function openDailySalesModal() {
     setTodayDate();
     generateBinderNumber();
