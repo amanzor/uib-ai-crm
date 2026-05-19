@@ -375,13 +375,24 @@ function autoCalculateCommission() {
     }
 }
 
+function getInitials(name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+}
+
 function initializeAgentButtons() {
     const agentList = document.getElementById('agentList');
+    if (!agentList) return;
     agentList.innerHTML = '';
+
     AGENTS.forEach(agent => {
         const btn = document.createElement('button');
         btn.className = 'agent-btn';
-        btn.textContent = agent;
+        btn.innerHTML = `
+            <div class="agent-avatar">${getInitials(agent)}</div>
+            <span>${agent}</span>
+        `;
         btn.onclick = () => showAgentLoginModal(agent);
         agentList.appendChild(btn);
     });
