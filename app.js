@@ -114,6 +114,20 @@ function getEasternYear() {
     return parseInt(new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).split('-')[0], 10);
 }
 
+// Returns a display-friendly date+time string, e.g. "05/18/2026  3:45 PM ET"
+function getEasternDateTimeDisplay() {
+    const now = new Date();
+    const date = now.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York',
+        month: '2-digit', day: '2-digit', year: 'numeric'
+    });
+    const time = now.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
+        hour: 'numeric', minute: '2-digit', hour12: true
+    });
+    return `${date}  ${time} ET`;
+}
+
 // ── All Lines of Business — matches the policy entry dropdown ─
 const ALL_LOBS = [
     "BOP", "Boat", "Builders Risk", "Business Owner", "Classic Collectors",
@@ -602,9 +616,10 @@ function selectDealerAndOpenLog(dealerName) {
         el.textContent = dealerName;
     });
 
-    // Set today's date
-    const today = getEasternDateString();
-    document.getElementById('vl_date').value = today;
+    // Set today's date and show date+time display
+    document.getElementById('vl_date').value = getEasternDateString();
+    const dtDisplay = document.getElementById('vl_dateTimeDisplay');
+    if (dtDisplay) dtDisplay.textContent = '🕐 ' + getEasternDateTimeDisplay();
 
     // Populate agent dropdown — combine all three sources, dedup, sort
     const sel = document.getElementById('vl_agent');
@@ -639,8 +654,9 @@ function resetVerificationForm() {
     clearSignaturePad('vl_customerSigCanvas');
     clearSignaturePad('vl_agentSigCanvas');
     document.getElementById('vl_verifiedBy').value = '';
-    const today = getEasternDateString();
-    document.getElementById('vl_date').value = today;
+    document.getElementById('vl_date').value = getEasternDateString();
+    const dtDisplay = document.getElementById('vl_dateTimeDisplay');
+    if (dtDisplay) dtDisplay.textContent = '🕐 ' + getEasternDateTimeDisplay();
 }
 
 function initSignaturePad(canvasId) {
@@ -844,9 +860,8 @@ function downloadVerificationForm(entry) {
 
 // ── New Prospect ──────────────────────────────────────────────
 function openNewProspectModal() {
-    // Set today's date
-    const today = getEasternDateString();
-    document.getElementById('prospectDateAdded').value = today;
+    // Set today's date + time (ET)
+    document.getElementById('prospectDateAdded').value = getEasternDateTimeDisplay();
 
     // Populate agent dropdown from agentMasterData
     const agentSelect = document.getElementById('prospectAgent');
@@ -877,7 +892,7 @@ function saveProspect(e) {
         referredBy:  document.getElementById('prospectReferredBy').value.trim(),
         agent:       document.getElementById('prospectAgent').value,
         followUpDate:document.getElementById('prospectFollowUpDate').value,
-        dateAdded:   document.getElementById('prospectDateAdded').value,
+        dateAdded:   getEasternDateTimeDisplay(),
         notes:       document.getElementById('prospectNotes').value.trim(),
         status:      'Open'
     };
@@ -887,8 +902,7 @@ function saveProspect(e) {
     localStorage.setItem('prospectData', JSON.stringify(prospects));
 
     document.getElementById('prospectForm').reset();
-    const today = getEasternDateString();
-    document.getElementById('prospectDateAdded').value = today;
+    document.getElementById('prospectDateAdded').value = getEasternDateTimeDisplay();
     const msg = document.getElementById('prospectSuccessMsg');
     msg.style.display = 'block';
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
