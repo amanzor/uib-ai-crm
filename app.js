@@ -553,7 +553,26 @@ function saveEntry() {
 // ── Daily Verification Log ────────────────────────────────────
 const _vlSigPads = {};
 
+let _vlSelectedDealer = '';
+
 function openDailyVerificationModal() {
+    // Show dealer picker first
+    document.getElementById('dealerSelectModal').classList.add('active');
+}
+
+function selectDealerAndOpenLog(dealerName) {
+    _vlSelectedDealer = dealerName;
+
+    // Close dealer picker
+    document.getElementById('dealerSelectModal').classList.remove('active');
+
+    // Set dealer name everywhere in the form
+    document.getElementById('vl_dealerDisplay').textContent = dealerName;
+    document.querySelectorAll('#dailyVerificationModal .vl-dealer').forEach(el => {
+        el.textContent = dealerName;
+    });
+
+    // Set today's date
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('vl_date').value = today;
 
@@ -566,7 +585,7 @@ function openDailyVerificationModal() {
     document.getElementById('verificationSuccessMsg').style.display = 'none';
     document.getElementById('dailyVerificationModal').classList.add('active');
 
-    // Init signature pads (after modal is visible so canvas has dimensions)
+    // Init signature pads after modal is visible
     setTimeout(() => {
         initSignaturePad('vl_customerSigCanvas');
         initSignaturePad('vl_agentSigCanvas');
@@ -678,6 +697,7 @@ function saveVerificationLog(e) {
     const entry = {
         id:            'VL-' + Date.now(),
         date,
+        dealer:        _vlSelectedDealer,
         customerName,
         agent,
         acknowledged:  ack,
@@ -704,6 +724,7 @@ function saveVerificationLog(e) {
 
 function downloadVerificationForm(entry) {
     const formatted = new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    const dealer = entry.dealer || 'Dealer';
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -735,15 +756,15 @@ function downloadVerificationForm(entry) {
   <h1>Universal Insurance Brokers</h1>
   <p>Licensed Insurance Agency — State of Florida</p>
 </div>
-<p class="meta">Date: ${formatted} &nbsp;|&nbsp; Agent/CSR: ${entry.agent} &nbsp;|&nbsp; Entry ID: ${entry.id}</p>
+<p class="meta">Dealer: ${dealer} &nbsp;|&nbsp; Date: ${formatted} &nbsp;|&nbsp; Agent/CSR: ${entry.agent} &nbsp;|&nbsp; Entry ID: ${entry.id}</p>
 
 <!-- Form 1 -->
 <div class="section">
   <h2>Notice and Customer Acknowledgement Form</h2>
   <div class="legal">
-    <p><strong>Gunther Volkswagen of Coconut Creek</strong> and <strong>Universal Insurance Brokers</strong> wish to inform you that there is no affiliation or other connection between <strong>Universal Insurance Brokers</strong> and <strong>Gunther Volkswagen of Coconut Creek</strong>. <strong>Gunther Volkswagen of Coconut Creek</strong> leases floor space to <strong>Universal Insurance Brokers</strong>, which is an independently owned and operated, licensed insurance agency doing business in the State of Florida. The purpose of <strong>Universal Insurance Brokers</strong> is to help their clients with their insurance transfer or provide options if none exists. Representatives of <strong>Universal Insurance Brokers</strong> are not employees or agents of and have no affiliation or connection with <strong>Gunther Volkswagen of Coconut Creek</strong>.</p>
-    <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not require any of its customers to obtain insurance coverage from <strong>Universal Insurance Brokers</strong>, or any other particular insurer, agent, or broker. <strong>Gunther Volkswagen of Coconut Creek</strong> does not negotiate any insurance policy through <strong>Universal Insurance Brokers</strong>, or any other insurer, agent, or broker. The choice of a particular insurer, agent, or broker, and the negotiation of any insurance policy, is entirely for you, the Customer, to make.</p>
-    <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not receive any fee, commission, royalty, percentage, or similar payment from any revenue that <strong>Universal Insurance Brokers</strong> earns from the sale or servicing of any insurance policy or any other insurance product.</p>
+    <p><strong>${dealer}</strong> and <strong>Universal Insurance Brokers</strong> wish to inform you that there is no affiliation or other connection between <strong>Universal Insurance Brokers</strong> and <strong>${dealer}</strong>. <strong>${dealer}</strong> leases floor space to <strong>Universal Insurance Brokers</strong>, which is an independently owned and operated, licensed insurance agency doing business in the State of Florida. The purpose of <strong>Universal Insurance Brokers</strong> is to help their clients with their insurance transfer or provide options if none exists. Representatives of <strong>Universal Insurance Brokers</strong> are not employees or agents of and have no affiliation or connection with <strong>${dealer}</strong>.</p>
+    <p><strong>${dealer}</strong> does not require any of its customers to obtain insurance coverage from <strong>Universal Insurance Brokers</strong>, or any other particular insurer, agent, or broker. <strong>${dealer}</strong> does not negotiate any insurance policy through <strong>Universal Insurance Brokers</strong>, or any other insurer, agent, or broker. The choice of a particular insurer, agent, or broker, and the negotiation of any insurance policy, is entirely for you, the Customer, to make.</p>
+    <p><strong>${dealer}</strong> does not receive any fee, commission, royalty, percentage, or similar payment from any revenue that <strong>Universal Insurance Brokers</strong> earns from the sale or servicing of any insurance policy or any other insurance product.</p>
   </div>
   <div class="field-row">
     <div class="field"><label>Customer Name</label><div class="line" style="padding-top:4px;">${entry.customerName}</div></div>

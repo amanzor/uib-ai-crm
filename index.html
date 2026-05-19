@@ -720,6 +720,34 @@
                 </div>
             </div>
 
+            <!-- Dealer Selection Modal -->
+            <div id="dealerSelectModal" class="modal">
+                <div class="modal-content" style="max-width:480px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                        <h3 style="margin:0; color:#6c3483;">📋 Daily Verification Log</h3>
+                        <button type="button" class="btn-danger btn-sm" onclick="document.getElementById('dealerSelectModal').classList.remove('active')">✕</button>
+                    </div>
+                    <p style="color:#555; font-size:14px; margin-bottom:24px; text-align:center;">Select the dealership for this verification log:</p>
+                    <div style="display:flex; flex-direction:column; gap:14px;">
+                        <button type="button" onclick="selectDealerAndOpenLog('Spitzer Auto World')"
+                            style="padding:18px 20px; font-size:15px; font-weight:600; background:#003399; color:white; border:none; border-radius:10px; cursor:pointer; text-align:left; transition:background 0.2s;"
+                            onmouseover="this.style.background='#0052cc'" onmouseout="this.style.background='#003399'">
+                            🏢 Spitzer Auto World
+                        </button>
+                        <button type="button" onclick="selectDealerAndOpenLog('Gunther Volkswagen of Coconut Creek')"
+                            style="padding:18px 20px; font-size:15px; font-weight:600; background:#003399; color:white; border:none; border-radius:10px; cursor:pointer; text-align:left; transition:background 0.2s;"
+                            onmouseover="this.style.background='#0052cc'" onmouseout="this.style.background='#003399'">
+                            🏢 Gunther VW Coconut Creek
+                        </button>
+                        <button type="button" onclick="selectDealerAndOpenLog('Gunther Volvo')"
+                            style="padding:18px 20px; font-size:15px; font-weight:600; background:#003399; color:white; border:none; border-radius:10px; cursor:pointer; text-align:left; transition:background 0.2s;"
+                            onmouseover="this.style.background='#0052cc'" onmouseout="this.style.background='#003399'">
+                            🏢 Gunther Volvo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Daily Verification Log Modal -->
             <div id="dailyVerificationModal" class="modal">
                 <div class="modal-content" style="max-width:780px; max-height:92vh; overflow-y:auto;">
@@ -733,6 +761,11 @@
                     </div>
 
                     <form id="verificationForm" onsubmit="saveVerificationLog(event)">
+
+                        <!-- Selected Dealer Banner -->
+                        <div id="vl_dealerBanner" style="background:#003399; color:white; padding:10px 16px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                            🏢 <span id="vl_dealerDisplay">—</span>
+                        </div>
 
                         <!-- Header Info -->
                         <div class="form-grid" style="margin-bottom:20px;">
@@ -752,9 +785,9 @@
                         <div style="border:2px solid #003399; border-radius:8px; padding:20px; margin-bottom:24px; background:#f8f9ff;">
                             <h4 style="text-align:center; color:#003399; font-size:1em; margin:0 0 14px 0; text-transform:uppercase; letter-spacing:0.5px;">Notice and Customer Acknowledgement Form</h4>
                             <div style="font-size:13px; line-height:1.7; color:#333; text-align:justify;">
-                                <p><strong>Gunther Volkswagen of Coconut Creek</strong> and <strong>Universal Insurance Brokers</strong> wish to inform you that there is no affiliation or other connection between <strong>Universal Insurance Brokers</strong> and <strong>Gunther Volkswagen of Coconut Creek</strong>. <strong>Gunther Volkswagen of Coconut Creek</strong> leases floor space to <strong>Universal Insurance Brokers</strong>, which is an independently owned and operated, licensed insurance agency doing business in the State of Florida. The purpose of <strong>Universal Insurance Brokers</strong> is to help their clients with their insurance transfer or provide options if none exists. Representatives of <strong>Universal Insurance Brokers</strong> are not employees or agents of and have no affiliation or connection with <strong>Gunther Volkswagen of Coconut Creek</strong>.</p>
-                                <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not require any of its customers to obtain insurance coverage from <strong>Universal Insurance Brokers</strong>, or any other particular insurer, agent, or broker. <strong>Gunther Volkswagen of Coconut Creek</strong> does not negotiate any insurance policy through <strong>Universal Insurance Brokers</strong>, or any other insurer, agent, or broker. The choice of a particular insurer, agent, or broker, and the negotiation of any insurance policy, is entirely for you, the Customer, to make.</p>
-                                <p><strong>Gunther Volkswagen of Coconut Creek</strong> does not receive any fee, commission, royalty, percentage, or similar payment from any revenue that <strong>Universal Insurance Brokers</strong> earns from the sale or servicing of any insurance policy or any other insurance product.</p>
+                                <p><strong class="vl-dealer">—</strong> and <strong>Universal Insurance Brokers</strong> wish to inform you that there is no affiliation or other connection between <strong>Universal Insurance Brokers</strong> and <strong class="vl-dealer">—</strong>. <strong class="vl-dealer">—</strong> leases floor space to <strong>Universal Insurance Brokers</strong>, which is an independently owned and operated, licensed insurance agency doing business in the State of Florida. The purpose of <strong>Universal Insurance Brokers</strong> is to help their clients with their insurance transfer or provide options if none exists. Representatives of <strong>Universal Insurance Brokers</strong> are not employees or agents of and have no affiliation or connection with <strong class="vl-dealer">—</strong>.</p>
+                                <p><strong class="vl-dealer">—</strong> does not require any of its customers to obtain insurance coverage from <strong>Universal Insurance Brokers</strong>, or any other particular insurer, agent, or broker. <strong class="vl-dealer">—</strong> does not negotiate any insurance policy through <strong>Universal Insurance Brokers</strong>, or any other insurer, agent, or broker. The choice of a particular insurer, agent, or broker, and the negotiation of any insurance policy, is entirely for you, the Customer, to make.</p>
+                                <p><strong class="vl-dealer">—</strong> does not receive any fee, commission, royalty, percentage, or similar payment from any revenue that <strong>Universal Insurance Brokers</strong> earns from the sale or servicing of any insurance policy or any other insurance product.</p>
                             </div>
                             <div style="margin-top:14px; display:flex; align-items:center; gap:16px;">
                                 <strong style="font-size:13px;">Customer acknowledges:</strong>
