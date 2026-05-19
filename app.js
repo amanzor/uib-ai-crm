@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Auto-calculate carrier commission when key fields change
-    ['basePremium', 'company', 'lineOfBusiness', 'paymentType'].forEach(id => {
+    ['basePremium', 'company', 'lineOfBusiness', 'paymentType', 'policyType'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', autoCalculateCommission);
         document.getElementById(id)?.addEventListener('input', autoCalculateCommission);
     });
@@ -181,6 +181,7 @@ function autoCalculateCommission() {
     const carrier      = document.getElementById('company')?.value;
     const lob          = document.getElementById('lineOfBusiness')?.value;
     const paymentType  = document.getElementById('paymentType')?.value;
+    const policyType   = document.getElementById('policyType')?.value;
 
     const rateLabel    = document.getElementById('commissionRateLabel');
     const breakdown    = document.getElementById('commissionBreakdown');
@@ -191,7 +192,8 @@ function autoCalculateCommission() {
         return;
     }
 
-    const rate = getCommissionRate(carrier, lob, paymentType);
+    const rate = getCommissionRate(carrier, lob, paymentType, policyType);
+    const typeLabel = (policyType === 'Renewal' || policyType === 'Renew A-B') ? 'Renew' : 'New';
 
     if (rate > 0) {
         const commission = parseFloat((basePremium * (rate / 100)).toFixed(2));
@@ -202,11 +204,11 @@ function autoCalculateCommission() {
 
         // Show the rate label and breakdown
         if (rateLabel) {
-            rateLabel.textContent = `— Auto: ${rate}% carrier rate`;
+            rateLabel.textContent = `— Auto: ${rate}% (${typeLabel}) carrier rate`;
             rateLabel.style.display = 'inline';
         }
         if (breakdown) {
-            breakdown.innerHTML = `💡 $${basePremium.toLocaleString()} × ${rate}% = <strong>$${commission.toLocaleString()}</strong>`;
+            breakdown.innerHTML = `💡 $${basePremium.toLocaleString()} × ${rate}% (${typeLabel}) = <strong>$${commission.toLocaleString()}</strong>`;
             breakdown.style.display = 'block';
         }
 
@@ -386,13 +388,14 @@ function saveEntry() {
     localStorage.setItem('binderData', JSON.stringify(allData));
 
     // Calculate and store commission based on base premium
-    const premium = entry.basePremium;
-    const carrier = entry.company;
-    const lob = entry.lineOfBusiness;
+    const premium     = entry.basePremium;
+    const carrier     = entry.company;
+    const lob         = entry.lineOfBusiness;
     const paymentType = entry.paymentType || 'Monthly Paid';
-    const agent = entry.agent;
+    const policyType  = entry.policyType  || 'New';
+    const agent       = entry.agent;
 
-    const rate = getCommissionRate(carrier, lob, paymentType);
+    const rate = getCommissionRate(carrier, lob, paymentType, policyType);
 
     if (rate > 0) {
         const commission = calculateCommission(premium, rate);
@@ -994,7 +997,7 @@ function loadCarrierList() {
 function openAddCarrierModal() {
     document.getElementById('carrierFormTitle').textContent = 'Add New Carrier';
     document.getElementById('carrierForm').reset();
-    document.getElementById('commissionRulesTable').innerHTML = '<tr><td colspan="4" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
+    document.getElementById('commissionRulesTable').innerHTML = '<tr><td colspan="5" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
     document.getElementById('addEditCarrierModal').classList.add('active');
     document.getElementById('carrierName').focus();
 }
@@ -1039,12 +1042,13 @@ function editCarrier(carrierName) {
                         <option value="Gross Paid" ${rule.paymentType === 'Gross Paid' ? 'selected' : ''}>Gross Paid</option>
                     </select>
                 </td>
-                <td><input type="number" step="0.1" value="${rule.commissionRate}" style="width: 100%; padding: 5px;" /></td>
+                <td><input type="number" step="0.1" value="${rule.newRate ?? rule.commissionRate ?? ''}" placeholder="New %" style="width: 100%; padding: 5px;" /></td>
+                <td><input type="number" step="0.1" value="${rule.renewRate ?? ''}" placeholder="Renew %" style="width: 100%; padding: 5px;" /></td>
                 <td><button type="button" class="btn-danger" onclick="removeCommissionRuleRow(this)" style="padding: 5px 10px; font-size: 12px;">❌</button></td>
             </tr>
         `).join('');
     } else {
-        rulesTable.innerHTML = '<tr><td colspan="4" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
+        rulesTable.innerHTML = '<tr><td colspan="5" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
     }
 
     document.getElementById('addEditCarrierModal').classList.add('active');
@@ -1063,7 +1067,7 @@ function deleteCarrier(carrierName) {
 // Commission Rules Management
 function addCommissionRuleRow() {
     const rulesTable = document.getElementById('commissionRulesTable');
-    const isEmpty = rulesTable.querySelector('tr[class="no-data"]');
+    const isEmpty = rulesTable.querySelector('td[colspan]');
 
     const newRow = document.createElement('tr');
     newRow.innerHTML = `
@@ -1082,7 +1086,8 @@ function addCommissionRuleRow() {
                 <option value="Gross Paid">Gross Paid</option>
             </select>
         </td>
-        <td><input type="number" step="0.1" placeholder="e.g., 15.5" style="width: 100%; padding: 5px;" /></td>
+        <td><input type="number" step="0.1" placeholder="New %" style="width: 100%; padding: 5px;" /></td>
+        <td><input type="number" step="0.1" placeholder="Renew %" style="width: 100%; padding: 5px;" /></td>
         <td><button type="button" class="btn-danger" onclick="removeCommissionRuleRow(this)" style="padding: 5px 10px; font-size: 12px;">❌</button></td>
     `;
 
@@ -1098,7 +1103,7 @@ function removeCommissionRuleRow(button) {
     button.parentElement.parentElement.remove();
 
     if (rulesTable.children.length === 0) {
-        rulesTable.innerHTML = '<tr><td colspan="4" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
+        rulesTable.innerHTML = '<tr><td colspan="5" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
     }
 }
 
@@ -1117,19 +1122,20 @@ document.getElementById('carrierForm')?.addEventListener('submit', (e) => {
     const rules = [];
 
     rulesTable.querySelectorAll('tr').forEach(row => {
-        if (row.className !== 'no-data') {
-            const cells = row.querySelectorAll('td');
-            const lob = cells[0].querySelector('select')?.value;
-            const paymentType = cells[1].querySelector('select')?.value;
-            const rate = parseFloat(cells[2].querySelector('input')?.value);
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 5) return; // skip empty-state row
+        const lob         = cells[0].querySelector('select')?.value;
+        const paymentType = cells[1].querySelector('select')?.value;
+        const newRate     = parseFloat(cells[2].querySelector('input')?.value);
+        const renewRate   = parseFloat(cells[3].querySelector('input')?.value);
 
-            if (lob && paymentType && !isNaN(rate) && rate >= 0) {
-                rules.push({
-                    lineOfBusiness: lob,
-                    paymentType: paymentType,
-                    commissionRate: rate
-                });
-            }
+        if (lob && paymentType && (!isNaN(newRate) || !isNaN(renewRate))) {
+            rules.push({
+                lineOfBusiness: lob,
+                paymentType:    paymentType,
+                newRate:        isNaN(newRate)   ? null : newRate,
+                renewRate:      isNaN(renewRate) ? null : renewRate
+            });
         }
     });
 
@@ -1344,7 +1350,7 @@ document.getElementById('manageAgentForm')?.addEventListener('submit', (e) => {
 });
 
 // Commission Calculation Functions
-function getCommissionRate(carrierName, lob, paymentType) {
+function getCommissionRate(carrierName, lob, paymentType, policyType) {
     const carriers = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
     const carrier = carriers[carrierName];
 
@@ -1356,7 +1362,18 @@ function getCommissionRate(carrierName, lob, paymentType) {
         r.lineOfBusiness === lob && r.paymentType === paymentType
     );
 
-    return rule ? rule.commissionRate : 0;
+    if (!rule) return 0;
+
+    // Determine if this is a renewal based on policyType
+    const isRenewal = policyType === 'Renewal' || policyType === 'Renew A-B';
+
+    if (isRenewal) {
+        // Use renewRate if set, fallback to newRate, then legacy commissionRate
+        return rule.renewRate ?? rule.newRate ?? rule.commissionRate ?? 0;
+    } else {
+        // New / Rewrite — use newRate, fallback to legacy commissionRate
+        return rule.newRate ?? rule.commissionRate ?? 0;
+    }
 }
 
 function calculateCommission(premium, rate) {
@@ -1383,11 +1400,12 @@ function recalculateAllCommissions() {
         const carrier = policy.company;
         const lob = policy.lineOfBusiness;
         const premium = parseFloat(policy.totalPremium) || 0;
-        const paymentType = policy.paymentType || 'Monthly Paid';  // Default to Monthly Paid if not set
+        const paymentType = policy.paymentType || 'Monthly Paid';
+        const policyType  = policy.policyType  || 'New';
         const month = policy.entryDate ? new Date(policy.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : getMonthYear();
 
         // Get commission rate
-        const rate = getCommissionRate(carrier, lob, paymentType);
+        const rate = getCommissionRate(carrier, lob, paymentType, policyType);
 
         if (rate > 0) {
             // Calculate commission
