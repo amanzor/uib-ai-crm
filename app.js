@@ -813,6 +813,11 @@ function saveVerificationLog(e) {
         document.getElementById('verificationSuccessMsg').style.display = 'none';
         closeDailyVerificationModal();
     }, 2500);
+
+    // Refresh list if logs section is open
+    if (document.getElementById('verificationLogsSection')?.classList.contains('active')) {
+        renderVerificationLogsTable();
+    }
 }
 
 function downloadVerificationForm(entry) {
@@ -1026,6 +1031,72 @@ function renderProspectsTable() {
         `Showing ${filtered.length} of ${prospects.length} prospect${prospects.length !== 1 ? 's' : ''}`;
 
     if (window.UIBMotion) UIBMotion.animateTableRows(tbody);
+}
+
+// ── Verification Logs Section ──────────────────────────────────
+function showVerificationLogsSection() {
+    showSection('verificationLogsSection');
+    renderVerificationLogsTable();
+    refreshIcons();
+    if (window.UIBMotion) UIBMotion.animateSection(document.getElementById('verificationLogsSection'));
+}
+
+function renderVerificationLogsTable() {
+    const logs    = JSON.parse(localStorage.getItem('verificationLogs')) || [];
+    const search  = (document.getElementById('vlSearch')?.value || '').toLowerCase();
+    const agentF  = document.getElementById('vlFilterAgent')?.value || '';
+    const dealerF = document.getElementById('vlFilterDealer')?.value || '';
+
+    const filtered = logs.filter(l => {
+        const matchSearch = !search || (l.customerName || '').toLowerCase().includes(search);
+        const matchAgent  = !agentF  || l.agent === agentF;
+        const matchDealer = !dealerF || l.dealer === dealerF;
+        return matchSearch && matchAgent && matchDealer;
+    });
+
+    // Sort newest first
+    filtered.sort((a, b) => b.id.localeCompare(a.id));
+
+    const tbody = document.getElementById('vlTableBody');
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:32px;">No verification logs found.</td></tr>';
+        document.getElementById('vlCount').textContent = '';
+        return;
+    }
+
+    const yesStyle = 'background:#d1fae5;color:#065f46;';
+    const noStyle  = 'background:#fef2f2;color:#991b1b;';
+
+    tbody.innerHTML = filtered.map(l => {
+        const ackStyle  = l.acknowledged   === 'yes' ? yesStyle : noStyle;
+        const permStyle = l.permissionToFollowUp === 'yes' ? yesStyle : noStyle;
+        const confStyle = l.agentConfirmed === 'yes' ? yesStyle : noStyle;
+        const badge = (val, style) =>
+            `<span style="padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;${style}">${val === 'yes' ? 'Yes' : 'No'}</span>`;
+        return `<tr>
+            <td>${l.date || '—'}</td>
+            <td>${l.agent || '—'}</td>
+            <td style="font-weight:600;">${l.customerName || '—'}</td>
+            <td>${l.dealer || '—'}</td>
+            <td>${badge(l.acknowledged, ackStyle)}</td>
+            <td>${badge(l.permissionToFollowUp, permStyle)}</td>
+            <td>${badge(l.agentConfirmed, confStyle)}</td>
+            <td style="font-size:12px;color:var(--gray-500);">${l.timestamp || '—'}</td>
+            <td><button class="btn-sm btn-secondary" onclick="redownloadVerificationLog('${l.id}')"><i data-lucide="download"></i> Download</button></td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('vlCount').textContent =
+        `Showing ${filtered.length} of ${logs.length} log${logs.length !== 1 ? 's' : ''}`;
+
+    refreshIcons();
+    if (window.UIBMotion) UIBMotion.animateTableRows(tbody);
+}
+
+function redownloadVerificationLog(id) {
+    const logs  = JSON.parse(localStorage.getItem('verificationLogs')) || [];
+    const entry = logs.find(l => l.id === id);
+    if (entry) downloadVerificationForm(entry);
 }
 
 // ── Daily Sales Entry Modal ────────────────────────────────────

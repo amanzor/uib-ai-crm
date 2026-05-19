@@ -540,6 +540,7 @@
                         <button class="btn-success" onclick="openNewProspectModal()"><i data-lucide="user-plus"></i> New Prospect</button>
                         <button class="btn-primary" onclick="showProspectsSection()"><i data-lucide="users"></i> View Prospects</button>
                         <button class="btn-purple" onclick="openDailyVerificationModal()"><i data-lucide="file-check"></i> Daily Verification Log</button>
+                        <button class="btn-purple" onclick="showVerificationLogsSection()"><i data-lucide="list"></i> View Verification Logs</button>
                         <button class="btn-primary" onclick="showAdminLogin()"><i data-lucide="lock"></i> Admin Login</button>
                     </div>
                 </div>
@@ -854,6 +855,63 @@
                     </table>
                 </div>
                 <p id="prospectCount" style="margin-top:10px; font-size:13px; color:var(--gray-500);"></p>
+            </div>
+
+            <!-- Verification Logs Section -->
+            <div id="verificationLogsSection" class="section">
+                <div class="user-info" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn-secondary btn-sm" onclick="showSection('loginSection')"><i data-lucide="arrow-left"></i> Back</button>
+                        <strong><i data-lucide="file-check"></i> Daily Verification Logs</strong>
+                    </div>
+                    <button class="btn-purple btn-sm" onclick="openDailyVerificationModal()"><i data-lucide="plus"></i> New Log</button>
+                </div>
+
+                <!-- Filters -->
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin:16px 0;">
+                    <input type="text" id="vlSearch" placeholder="Search customer name…"
+                        oninput="renderVerificationLogsTable()"
+                        style="flex:1; min-width:180px; padding:8px 12px; border:1px solid var(--gray-200); border-radius:var(--radius-sm); font-size:14px;">
+                    <select id="vlFilterAgent" onchange="renderVerificationLogsTable()"
+                        style="padding:8px 12px; border:1px solid var(--gray-200); border-radius:var(--radius-sm); font-size:14px;">
+                        <option value="">All Agents</option>
+                        <option>Alberto Manzor</option>
+                        <option>Randy Diaz</option>
+                        <option>Amanda Montano</option>
+                        <option>Uriel Rendon</option>
+                        <option>Jorge Castro</option>
+                        <option>Lazaro Reigoza</option>
+                    </select>
+                    <select id="vlFilterDealer" onchange="renderVerificationLogsTable()"
+                        style="padding:8px 12px; border:1px solid var(--gray-200); border-radius:var(--radius-sm); font-size:14px;">
+                        <option value="">All Dealers</option>
+                        <option>Sunrise Autoplex</option>
+                        <option>Prestige Autoplex</option>
+                    </select>
+                </div>
+
+                <!-- Table -->
+                <div style="overflow-x:auto;">
+                    <table class="data-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Agent</th>
+                                <th>Customer Name</th>
+                                <th>Dealer</th>
+                                <th>Acknowledged</th>
+                                <th>Permission to Follow Up</th>
+                                <th>Agent Confirmed</th>
+                                <th>Timestamp</th>
+                                <th>Download</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vlTableBody">
+                            <tr><td colspan="9" style="text-align:center; color:var(--gray-400); padding:32px;">No verification logs found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="vlCount" style="margin-top:10px; font-size:13px; color:var(--gray-500);"></p>
             </div>
 
             <!-- Agent Dashboard -->
