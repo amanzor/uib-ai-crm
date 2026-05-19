@@ -316,6 +316,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render Lucide icons in static HTML
     refreshIcons();
 
+    // Animate header + login screen on first paint
+    if (window.UIBMotion) {
+        UIBMotion.animateHeader();
+        UIBMotion.animateAgentCards();
+        UIBMotion.addRippleToButtons();
+    }
+
     // Sync from Drive in background — won't block the UI
     syncFromDrive().then(() => {
         initializeAgentButtons(); // Refresh agent buttons after sync
@@ -407,15 +414,17 @@ function initializeAgentButtons() {
         agentList.appendChild(btn);
     });
     refreshIcons();
+    if (window.UIBMotion) UIBMotion.animateAgentCards();
 }
 
 function showAgentLoginModal(agent) {
     const modal = document.getElementById('agentLoginModal');
     document.getElementById('loginAgentName').textContent = agent;
     document.getElementById('agentPassword').value = '';
-    document.getElementById('agentPassword').focus();
     document.getElementById('selectedAgent').value = agent;
     modal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
+    document.getElementById('agentPassword').focus();
 }
 
 function closeAgentLoginModal() {
@@ -478,7 +487,9 @@ function generateBinderNumber() {
 
 // Admin Login
 function showAdminLogin() {
-    document.getElementById('adminLoginModal').classList.add('active');
+    const modal = document.getElementById('adminLoginModal');
+    modal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
     document.getElementById('adminPassword').focus();
 }
 
@@ -513,7 +524,13 @@ function logout() {
 // UI Navigation
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.getElementById(sectionId).classList.add('active');
+    const el = document.getElementById(sectionId);
+    el.classList.add('active');
+    if (window.UIBMotion) {
+        UIBMotion.animateSection(el);
+        UIBMotion.animateUserInfoBar(el);
+        UIBMotion.addRippleToButtons();
+    }
 }
 
 // Form Handling
@@ -625,8 +642,9 @@ const _vlSigPads = {};
 let _vlSelectedDealer = '';
 
 function openDailyVerificationModal() {
-    // Show dealer picker first
-    document.getElementById('dealerSelectModal').classList.add('active');
+    const m = document.getElementById('dealerSelectModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
 }
 
 function selectDealerAndOpenLog(dealerName) {
@@ -655,7 +673,9 @@ function selectDealerAndOpenLog(dealerName) {
         allAgents.map(a => `<option value="${a}">${a}</option>`).join('');
 
     document.getElementById('verificationSuccessMsg').style.display = 'none';
-    document.getElementById('dailyVerificationModal').classList.add('active');
+    const vlModal = document.getElementById('dailyVerificationModal');
+    vlModal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(vlModal);
 
     // Init signature pads after modal is visible
     setTimeout(() => {
@@ -885,6 +905,9 @@ function downloadVerificationForm(entry) {
 
 // ── New Prospect ──────────────────────────────────────────────
 function openNewProspectModal() {
+    const m = document.getElementById('newProspectModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     // Set today's date + time (ET)
     document.getElementById('prospectDateAdded').value = getEasternDateTimeDisplay();
 
@@ -895,7 +918,6 @@ function openNewProspectModal() {
         agents.map(a => `<option value="${a}">${a}</option>`).join('');
 
     document.getElementById('prospectSuccessMsg').style.display = 'none';
-    document.getElementById('newProspectModal').classList.add('active');
 }
 
 function closeNewProspectModal() {
@@ -947,7 +969,9 @@ function selectLocationAndOpenSales(location) {
     document.getElementById('salesLocationDisplay').textContent = location;
     setTodayDate();
     generateBinderNumber();
-    document.getElementById('dailySalesModal').classList.add('active');
+    const m = document.getElementById('dailySalesModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
 }
 
 function closeDailySalesModal() {
@@ -958,8 +982,13 @@ function closeDailySalesModal() {
 
 function showSuccess() {
     const msg = document.getElementById('successMessage');
-    msg.classList.add('show');
-    setTimeout(() => msg.classList.remove('show'), 3000);
+    if (window.UIBMotion) {
+        msg.classList.add('show');
+        UIBMotion.animateSuccess(msg);
+    } else {
+        msg.classList.add('show');
+        setTimeout(() => msg.classList.remove('show'), 3000);
+    }
 }
 
 // Agent Data Display
@@ -990,6 +1019,7 @@ function renderAgentTable(entries) {
         </tr>
     `).join('');
     refreshIcons();
+    if (window.UIBMotion) UIBMotion.animateTableRows(document.getElementById('agentTable'));
 }
 
 function filterAgentData() {
@@ -1071,6 +1101,7 @@ function renderAdminStats() {
             <div class="number">$${stats.avgPremium.toFixed(2)}</div>
         </div>
     `;
+    if (window.UIBMotion) UIBMotion.animateStatCards();
 }
 
 function renderCharts() {
@@ -1083,19 +1114,23 @@ function renderCharts() {
     });
 
     const agentChart = document.getElementById('agentChart');
+    const agentMax = Math.max(...Object.values(agentData)) || 1;
     agentChart.innerHTML = Object.entries(agentData)
-        .map(([agent, total]) => `
+        .map(([agent, total]) => {
+            const pct = ((total / agentMax) * 100).toFixed(1) + '%';
+            return `
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                     <strong>${agent}</strong>
                     <span>$${total.toFixed(2)}</span>
                 </div>
-                <div style="background: #e0e0e0; border-radius: 4px; height: 25px; overflow: hidden;">
-                    <div style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: ${(total / Math.max(...Object.values(agentData))) * 100}%;">
+                <div style="background: var(--gray-200); border-radius: 6px; height: 24px; overflow: hidden;">
+                    <div data-chart-bar="${pct}" style="background: linear-gradient(90deg, var(--blue) 0%, var(--blue-light) 100%); height: 100%; border-radius: 6px; width: 0%;">
                     </div>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
+    if (window.UIBMotion) UIBMotion.animateChartBars(agentChart);
 
     // Business Chart
     const businessData = {};
@@ -1104,21 +1139,25 @@ function renderCharts() {
     });
 
     const businessChart = document.getElementById('businessChart');
+    const bizMax = Math.max(...Object.values(businessData)) || 1;
     businessChart.innerHTML = Object.entries(businessData)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8)
-        .map(([business, total]) => `
+        .map(([business, total]) => {
+            const pct = ((total / bizMax) * 100).toFixed(1) + '%';
+            return `
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                     <strong>${business}</strong>
                     <span>$${total.toFixed(2)}</span>
                 </div>
-                <div style="background: #e0e0e0; border-radius: 4px; height: 25px; overflow: hidden;">
-                    <div style="background: linear-gradient(90deg, #f093fb, #f5576c); height: 100%; width: ${(total / Math.max(...Object.values(businessData))) * 100}%;">
+                <div style="background: var(--gray-200); border-radius: 6px; height: 24px; overflow: hidden;">
+                    <div data-chart-bar="${pct}" style="background: linear-gradient(90deg, var(--purple) 0%, var(--blue-light) 100%); height: 100%; border-radius: 6px; width: 0%;">
                     </div>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
+    if (window.UIBMotion) UIBMotion.animateChartBars(businessChart);
 }
 
 function renderAdminTable(entries) {
@@ -1145,6 +1184,7 @@ function renderAdminTable(entries) {
         </tr>
     `).join('');
     refreshIcons();
+    if (window.UIBMotion) UIBMotion.animateTableRows(document.getElementById('adminTable'));
 }
 
 function filterAdminData() {
@@ -1434,7 +1474,9 @@ function updateAgentPassword(agent) {
 
 // Carrier Management Functions
 function showCarrierManagement() {
-    document.getElementById('carrierManagementModal').classList.add('active');
+    const m = document.getElementById('carrierManagementModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     loadCarrierList();
 }
 
@@ -1473,7 +1515,9 @@ function openAddCarrierModal() {
     document.getElementById('carrierFormTitle').textContent = 'Add New Carrier';
     document.getElementById('carrierForm').reset();
     document.getElementById('commissionRulesTable').innerHTML = '<tr><td colspan="5" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
-    document.getElementById('addEditCarrierModal').classList.add('active');
+    const m = document.getElementById('addEditCarrierModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     document.getElementById('carrierName').focus();
 }
 
@@ -1647,7 +1691,9 @@ function initializeAgentData() {
 
 // Show Agent Management Modal
 function showAgentManagement() {
-    document.getElementById('agentManagementModal').classList.add('active');
+    const m = document.getElementById('agentManagementModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     loadAgentList();
 }
 
@@ -1910,7 +1956,9 @@ function recalculateAllCommissions() {
 
 // Commission Dashboard Functions
 function showCommissionDashboard() {
-    document.getElementById('commissionDashboardModal').classList.add('active');
+    const m = document.getElementById('commissionDashboardModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     loadCommissionDashboard();
 }
 

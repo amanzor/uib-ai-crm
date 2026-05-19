@@ -488,6 +488,14 @@
         }
         .password-input:focus { outline:none; border-color:var(--blue-light); }
 
+        /* ── Motion ripple ──────────────────────────────────────── */
+        .m-ripple {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            background: rgba(255,255,255,.22); transform: scale(0);
+        }
+        /* Ensure all buttons can host ripples */
+        button { position: relative; overflow: hidden; }
+
         /* ── Lucide Icons ────────────────────────────────────────── */
         svg.lucide {
             display: inline-block;
@@ -1786,6 +1794,8 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
+    <script src="motion.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
