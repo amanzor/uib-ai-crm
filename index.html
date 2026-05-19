@@ -872,12 +872,38 @@
 
                 <div class="success-message" id="successMessage">✓ Policy entry saved successfully!</div>
 
+                <!-- Location Picker Modal (Daily Sales Entry) -->
+                <div id="salesLocationModal" class="modal">
+                    <div class="modal-content" style="max-width:440px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                            <h3 style="margin:0;">📋 Daily Sales Entry</h3>
+                            <button type="button" class="btn-danger btn-sm" onclick="document.getElementById('salesLocationModal').classList.remove('active')">✕</button>
+                        </div>
+                        <p style="color:#555; font-size:14px; margin-bottom:24px; text-align:center;">Select your office location:</p>
+                        <div style="display:flex; flex-direction:column; gap:14px;">
+                            <button type="button" onclick="selectLocationAndOpenSales('Lehigh Acres Office')"
+                                style="padding:18px 20px; font-size:15px; font-weight:600; background:#003399; color:white; border:none; border-radius:10px; cursor:pointer; text-align:left; transition:background 0.2s;"
+                                onmouseover="this.style.background='#0052cc'" onmouseout="this.style.background='#003399'">
+                                📍 Lehigh Acres Office
+                            </button>
+                            <button type="button" onclick="selectLocationAndOpenSales('Hialeah Office')"
+                                style="padding:18px 20px; font-size:15px; font-weight:600; background:#003399; color:white; border:none; border-radius:10px; cursor:pointer; text-align:left; transition:background 0.2s;"
+                                onmouseover="this.style.background='#0052cc'" onmouseout="this.style.background='#003399'">
+                                📍 Hialeah Office
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Daily Sales Entry Modal -->
                 <div id="dailySalesModal" class="modal">
                     <div class="modal-content" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <h3 style="margin:0;">📋 Daily Sales Entry</h3>
                             <button type="button" class="btn-danger btn-sm" onclick="closeDailySalesModal()">✕ Close</button>
+                        </div>
+                        <div id="salesLocationBanner" style="background:#003399; color:white; padding:8px 14px; border-radius:8px; margin-bottom:18px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                            📍 <span id="salesLocationDisplay">—</span>
                         </div>
                     <form id="agentForm">
                         <div class="form-grid">

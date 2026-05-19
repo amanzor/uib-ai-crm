@@ -483,6 +483,7 @@ function saveEntry() {
         entryDate: document.getElementById('entryDate').value,
         effDate: document.getElementById('effDate').value,
         term: document.getElementById('term').value,
+        location: _selectedSalesLocation || '',
         timestamp: new Date().toISOString()
     };
     entry.agentCommissionShare = parseFloat(((entry.agencyFee + entry.agencyCommission) * 0.5).toFixed(2));
@@ -863,7 +864,17 @@ function saveProspect(e) {
 }
 
 // ── Daily Sales Entry Modal ────────────────────────────────────
+let _selectedSalesLocation = '';
+
 function openDailySalesModal() {
+    // Show location picker first
+    document.getElementById('salesLocationModal').classList.add('active');
+}
+
+function selectLocationAndOpenSales(location) {
+    _selectedSalesLocation = location;
+    document.getElementById('salesLocationModal').classList.remove('active');
+    document.getElementById('salesLocationDisplay').textContent = location;
     setTodayDate();
     generateBinderNumber();
     document.getElementById('dailySalesModal').classList.add('active');
@@ -871,6 +882,8 @@ function openDailySalesModal() {
 
 function closeDailySalesModal() {
     document.getElementById('dailySalesModal').classList.remove('active');
+    _selectedSalesLocation = '';
+    document.getElementById('salesLocationDisplay').textContent = '—';
 }
 
 function showSuccess() {
