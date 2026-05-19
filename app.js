@@ -606,11 +606,13 @@ function selectDealerAndOpenLog(dealerName) {
     const today = getEasternDateString();
     document.getElementById('vl_date').value = today;
 
-    // Populate agent dropdown
+    // Populate agent dropdown — combine all three sources, dedup, sort
     const sel = document.getElementById('vl_agent');
-    const agents = Object.keys(JSON.parse(localStorage.getItem('agentMasterData')) || {}).sort();
+    const fromMaster      = Object.keys(JSON.parse(localStorage.getItem('agentMasterData'))  || {});
+    const fromCredentials = Object.keys(JSON.parse(localStorage.getItem('agentCredentials')) || {});
+    const allAgents = [...new Set([...AGENTS, ...fromMaster, ...fromCredentials])].sort();
     sel.innerHTML = '<option value="">Select Agent</option>' +
-        agents.map(a => `<option value="${a}">${a}</option>`).join('');
+        allAgents.map(a => `<option value="${a}">${a}</option>`).join('');
 
     document.getElementById('verificationSuccessMsg').style.display = 'none';
     document.getElementById('dailyVerificationModal').classList.add('active');
