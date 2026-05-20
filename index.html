@@ -1294,10 +1294,7 @@
             <div id="adminSection" class="section">
                 <div class="user-info">
                     <span>Admin Dashboard</span>
-                    <div style="display:flex;gap:8px;">
-                        <button class="btn-primary btn-sm" onclick="openCredentialManager()"><i data-lucide="key"></i> Manage Agent Credentials</button>
-                        <button class="btn-danger btn-sm" onclick="logout()">Logout</button>
-                    </div>
+                    <button class="btn-danger btn-sm" onclick="logout()">Logout</button>
                 </div>
 
                 <div class="filter-section">
@@ -1890,6 +1887,7 @@
             <h3><i data-lucide="users"></i> Agent Management</h3>
             <div class="modal-actions" style="margin-bottom: 20px;">
                 <button type="button" class="btn-success" onclick="openAddAgentModal()"><i data-lucide="user-plus"></i> Add New Agent</button>
+                <button type="button" class="btn-primary" onclick="openCredentialManager()"><i data-lucide="key"></i> Manage Login Credentials</button>
                 <button type="button" class="btn-secondary" onclick="closeAgentManagement()">Close</button>
             </div>
             <div class="table-container">
