@@ -275,17 +275,129 @@ async function syncToSheet(action, payload) {
 
 const AGENTS = ['Alberto Manzor', 'Randy Diaz', 'Amanda Montano', 'Uriel Rendon', 'Jorge Castro', 'Lazaro Reigoza'];
 
-// Initialize credentials with default passwords
+// Initialize credentials — structure: { "Agent Name": { email, password } }
 function initializeCredentials() {
     let credentials = JSON.parse(localStorage.getItem('agentCredentials'));
+    // Migrate old flat format (name → plaintext password) to new format
+    if (credentials && typeof Object.values(credentials)[0] === 'string') {
+        const migrated = {};
+        AGENTS.forEach(agent => {
+            migrated[agent] = { email: '', password: credentials[agent] || agent.split(' ')[0].toLowerCase() };
+        });
+        credentials = migrated;
+        localStorage.setItem('agentCredentials', JSON.stringify(credentials));
+    }
     if (!credentials) {
         credentials = {};
         AGENTS.forEach(agent => {
-            credentials[agent] = agent.split(' ')[0].toLowerCase(); // Default: first name lowercase
+            credentials[agent] = { email: '', password: agent.split(' ')[0].toLowerCase() };
         });
         localStorage.setItem('agentCredentials', JSON.stringify(credentials));
     }
     return credentials;
+}
+
+// ── Agent Email Login ──────────────────────────────────────────
+function openAgentEmailLogin() {
+    document.getElementById('agentLoginEmail').value = '';
+    document.getElementById('agentLoginPassword').value = '';
+    document.getElementById('agentLoginError').style.display = 'none';
+    const m = document.getElementById('agentEmailLoginModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
+    refreshIcons();
+}
+
+function closeAgentEmailLogin() {
+    document.getElementById('agentEmailLoginModal').classList.remove('active');
+}
+
+function submitAgentEmailLogin(e) {
+    e.preventDefault();
+    const email    = document.getElementById('agentLoginEmail').value.trim().toLowerCase();
+    const password = document.getElementById('agentLoginPassword').value;
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    const errEl = document.getElementById('agentLoginError');
+
+    // Find agent whose email matches
+    const match = Object.entries(credentials).find(([name, cred]) =>
+        cred.email && cred.email.toLowerCase() === email && cred.password === password
+    );
+
+    if (!match) {
+        errEl.textContent = 'Invalid email or password. Please try again.';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const agentName = match[0];
+    errEl.style.display = 'none';
+    closeAgentEmailLogin();
+    showAgentSection(agentName);
+    loadFromSheet().then(() => {
+        loadAgentData();
+        populateAgentFilter();
+        generateBinderNumber();
+    });
+}
+
+// ── Credential Manager (Admin) ─────────────────────────────────
+function openCredentialManager() {
+    renderCredentialList();
+    const m = document.getElementById('credentialManagerModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
+    refreshIcons();
+}
+
+function closeCredentialManager() {
+    document.getElementById('credentialManagerModal').classList.remove('active');
+}
+
+function renderCredentialList() {
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    const container   = document.getElementById('credentialList');
+
+    container.innerHTML = AGENTS.map(agent => {
+        const cred = credentials[agent] || { email: '', password: '' };
+        return `
+        <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px;">
+            <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:14px;"><i data-lucide="user"></i> ${agent}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div>
+                    <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Email (username)</label>
+                    <input type="email" id="cred_email_${agent.replace(/\s+/g,'_')}"
+                        value="${cred.email || ''}" placeholder="agent@email.com"
+                        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Password</label>
+                    <input type="text" id="cred_pass_${agent.replace(/\s+/g,'_')}"
+                        value="${cred.password || ''}" placeholder="Enter password"
+                        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                </div>
+            </div>
+            <button class="btn-primary btn-sm" onclick="saveAgentCredential('${agent}')"><i data-lucide="save"></i> Save</button>
+        </div>`;
+    }).join('');
+    refreshIcons();
+}
+
+function saveAgentCredential(agent) {
+    const key   = agent.replace(/\s+/g, '_');
+    const email = document.getElementById(`cred_email_${key}`)?.value.trim() || '';
+    const pass  = document.getElementById(`cred_pass_${key}`)?.value.trim() || '';
+
+    if (!email || !pass) {
+        alert('Please enter both email and password.');
+        return;
+    }
+
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    credentials[agent] = { email, password: pass };
+    localStorage.setItem('agentCredentials', JSON.stringify(credentials));
+    driveSet('agentCredentials', credentials);
+    alert(`✓ Credentials saved for ${agent}`);
 }
 
 // Render all <i data-lucide> tags into SVGs (call after any DOM update)
@@ -437,15 +549,10 @@ document.getElementById('agentLoginForm')?.addEventListener('submit', (e) => {
     const password = document.getElementById('agentPassword').value;
     const credentials = JSON.parse(localStorage.getItem('agentCredentials'));
 
-    if (credentials[agent] === password) {
-        currentUser = agent;
-        currentRole = 'agent';
+    const storedPass = typeof credentials[agent] === 'object' ? credentials[agent]?.password : credentials[agent];
+    if (storedPass === password) {
         closeAgentLoginModal();
-        showSection('agentSection');
-        document.getElementById('userDisplay').textContent = `👤 Agent: ${agent}`;
-        document.getElementById('agentForm').reset();
-        setTodayDate();
-        generateBinderNumber();
+        showAgentSection(agent);
         loadFromSheet().then(() => {
             loadAgentData();
             populateAgentFilter();
@@ -457,6 +564,16 @@ document.getElementById('agentLoginForm')?.addEventListener('submit', (e) => {
         document.getElementById('agentPassword').focus();
     }
 });
+
+function showAgentSection(agent) {
+    currentUser = agent;
+    currentRole = 'agent';
+    showSection('agentSection');
+    document.getElementById('userDisplay').textContent = `👤 Agent: ${agent}`;
+    document.getElementById('agentForm').reset();
+    setTodayDate();
+    generateBinderNumber();
+}
 
 function setTodayDate() {
     const today = getEasternDateString();
