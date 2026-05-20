@@ -343,6 +343,8 @@ function submitAgentEmailLogin(e) {
 
 // ── Credential Manager (Admin) ─────────────────────────────────
 function openCredentialManager() {
+    // Close Agent Management modal first so they don't stack
+    document.getElementById('agentManagementModal')?.classList.remove('active');
     renderCredentialList();
     const m = document.getElementById('credentialManagerModal');
     m.classList.add('active');
@@ -352,6 +354,8 @@ function openCredentialManager() {
 
 function closeCredentialManager() {
     document.getElementById('credentialManagerModal').classList.remove('active');
+    // Re-open Agent Management so user can go back
+    showAgentManagement();
 }
 
 function renderCredentialList() {
