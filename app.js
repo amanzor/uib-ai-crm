@@ -2752,38 +2752,170 @@ function resetUICFilters() {
 
 // ── UIC Entry Picker ───────────────────────────────────────────
 let _uicPickerEntries = [];   // full list, rebuilt on open
+let _uicPickerSource  = 'binder';  // 'binder' | 'excel'
+let _uicExcelWorkbook = null;
+
+function uicSetSource(src) {
+    _uicPickerSource = src;
+    const binderActive = src === 'binder';
+    // Toggle tab styles
+    const bb = document.getElementById('uicSrcBinderBtn');
+    const eb = document.getElementById('uicSrcExcelBtn');
+    if (bb) { bb.style.background = binderActive ? 'var(--primary)' : 'var(--gray-100)'; bb.style.color = binderActive ? '#fff' : 'var(--gray-600)'; }
+    if (eb) { eb.style.background = binderActive ? 'var(--gray-100)' : 'var(--primary)'; eb.style.color = binderActive ? 'var(--gray-600)' : '#fff'; }
+    // Show/hide filter panels
+    const bf = document.getElementById('uicBinderFilters');
+    const ec = document.getElementById('uicExcelControls');
+    if (bf) bf.style.display = binderActive ? 'flex' : 'none';
+    if (ec) ec.style.display = binderActive ? 'none' : 'block';
+    // Reset table
+    _uicPickerEntries = [];
+    const selectAll = document.getElementById('uicPickerSelectAll');
+    if (selectAll) selectAll.checked = false;
+    if (binderActive) {
+        filterUICEntryList();
+    } else {
+        const tbody = document.getElementById('uicPickerTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--gray-400);">Click the drop zone above or drag an Excel file to load entries.</td></tr>';
+        document.getElementById('uicPickerSelCount').textContent = '0 entries selected';
+    }
+    refreshIcons();
+}
 
 function openUICEntryPicker() {
     const modal = document.getElementById('uicEntryPickerModal');
     if (!modal) return;
 
-    // Populate agent filter
+    // Build agent list from binder data
+    const binderAgents = [...new Set((JSON.parse(localStorage.getItem('binderData')) || []).map(e => e.agent).filter(Boolean))].sort();
+
+    // Populate binder agent filter
     const agentSel = document.getElementById('uicPickerAgentFilter');
     if (agentSel) {
         agentSel.innerHTML = '<option value="">All Agents</option>';
-        const agents = [...new Set((JSON.parse(localStorage.getItem('binderData')) || []).map(e => e.agent).filter(Boolean))].sort();
-        agents.forEach(a => {
-            const o = document.createElement('option'); o.value = a; o.textContent = a;
-            agentSel.appendChild(o);
-        });
+        binderAgents.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; agentSel.appendChild(o); });
     }
 
-    // Reset inputs
+    // Populate Excel agent-assign dropdown
+    const excelAgentSel = document.getElementById('uicExcelAgentAssign');
+    if (excelAgentSel) {
+        excelAgentSel.innerHTML = '<option value="">— Select Agent —</option>';
+        binderAgents.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; excelAgentSel.appendChild(o); });
+    }
+
+    // Reset binder filters
     const search = document.getElementById('uicPickerSearch');
     if (search) search.value = '';
     const yearSel = document.getElementById('uicPickerYearFilter');
     if (yearSel) yearSel.value = '';
+
+    // Reset Excel state
+    _uicExcelWorkbook = null;
+    const sheetRow = document.getElementById('uicExcelSheetRow');
+    if (sheetRow) sheetRow.style.display = 'none';
+    const fname = document.getElementById('uicExcelFileName');
+    if (fname) { fname.textContent = ''; fname.style.display = 'none'; }
+    const fileInput = document.getElementById('uicExcelFileInput');
+    if (fileInput) fileInput.value = '';
+
+    // Start on binder tab
+    _uicPickerSource = 'binder';
     const selectAll = document.getElementById('uicPickerSelectAll');
     if (selectAll) selectAll.checked = false;
 
     modal.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
+
+    // Make sure binder tab is visually active
+    uicSetSource('binder');
     refreshIcons();
-    filterUICEntryList();
 }
 
 function closeUICEntryPicker() {
     document.getElementById('uicEntryPickerModal')?.classList.remove('active');
+}
+
+// ── Excel upload path ─────────────────────────────────────────
+function uicHandleExcelDrop(event) {
+    event.preventDefault();
+    const dz = document.getElementById('uicExcelDropZone');
+    if (dz) dz.style.borderColor = 'var(--gray-200)';
+    const file = event.dataTransfer?.files[0];
+    if (file) _uicReadExcelFile(file);
+}
+
+function uicHandleExcelFile(event) {
+    const file = event.target.files[0];
+    if (file) _uicReadExcelFile(file);
+    event.target.value = '';
+}
+
+function _uicReadExcelFile(file) {
+    if (!window.XLSX) { alert('Excel library not loaded. Please refresh and try again.'); return; }
+    const fname = document.getElementById('uicExcelFileName');
+    if (fname) { fname.textContent = '📄 ' + file.name; fname.style.display = 'block'; }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        _uicExcelWorkbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+
+        // Populate sheet selector
+        const sheetSel = document.getElementById('uicExcelSheetSelect');
+        if (sheetSel) {
+            sheetSel.innerHTML = _uicExcelWorkbook.SheetNames.map(n => `<option value="${n}">${n}</option>`).join('');
+        }
+
+        const sheetRow = document.getElementById('uicExcelSheetRow');
+        if (sheetRow) sheetRow.style.display = 'flex';
+
+        // Auto-load first sheet
+        uicLoadExcelSheet();
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function uicLoadExcelSheet() {
+    if (!_uicExcelWorkbook) return;
+
+    const sheetName = document.getElementById('uicExcelSheetSelect')?.value;
+    const agent     = document.getElementById('uicExcelAgentAssign')?.value || '';
+
+    if (!sheetName) return;
+
+    const ws   = _uicExcelWorkbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    const parsed = csParseSheetRows(rows);
+
+    // Normalise Excel rate: stored as decimal (0.10) → convert to % (10)
+    // If already > 1 it's already a percentage — leave it.
+    const toPercent = r => r > 0 && r <= 1 ? parseFloat((r * 100).toFixed(4)) : r;
+
+    // Map parsed entries → picker entry shape
+    _uicPickerEntries = parsed.entries.map(entry => ({
+        customerName:       entry.clientName   || '',
+        status:             entry.status       || '',
+        policyType:         entry.transaction  || 'New',
+        lineOfBusiness:     entry.lob          || '',
+        company:            entry.carrier      || '',
+        down:               entry.downPayment  || 0,
+        paymentType:        entry.paymentType  || '',
+        basePremium:        entry.basePremium  || 0,
+        totalPremium:       entry.writtenPremium || 0,
+        term:               entry.term         || '',
+        policyNumber:       entry.policyNumber || '',
+        agent:              agent,
+        entryDate:          '',
+        _sourceRate:        toPercent(entry.rate),
+        _sourceCommission:  entry.commission,
+        _fromExcel:         true
+    }));
+
+    const countEl = document.getElementById('uicExcelEntryCount');
+    if (countEl) countEl.textContent = `${_uicPickerEntries.length} entr${_uicPickerEntries.length !== 1 ? 'ies' : 'y'} loaded`;
+
+    const selectAll = document.getElementById('uicPickerSelectAll');
+    if (selectAll) selectAll.checked = false;
+    _renderUICPickerTable();
 }
 
 function filterUICEntryList() {
@@ -2844,11 +2976,13 @@ function _renderUICPickerTable() {
         const basePrem    = parseFloat(e.basePremium)   || 0;
         const writtenPrem = parseFloat(e.totalPremium)  || basePrem;
         const downPmt     = parseFloat(e.down)          || 0;
-        const rate        = getCommissionRate(e.company, e.lineOfBusiness, e.paymentType || 'Monthly Paid', e.policyType || 'New');
-        const commission  = rate > 0 ? calculateCommission(basePrem, rate) : null;
+
+        // For Excel entries use the sheet's own rate/commission; for binder entries calculate
+        const rate       = e._fromExcel ? (e._sourceRate || 0)       : getCommissionRate(e.company, e.lineOfBusiness, e.paymentType || 'Monthly Paid', e.policyType || 'New');
+        const commission = e._fromExcel ? (e._sourceCommission != null ? e._sourceCommission : null) : (rate > 0 ? calculateCommission(basePrem, rate) : null);
 
         const commCell = commission != null
-            ? `<span style="color:#059669;font-weight:700;">$${commission.toFixed(2)}</span>`
+            ? `<span style="color:#059669;font-weight:700;">$${parseFloat(commission).toFixed(2)}</span>` + (e._fromExcel ? '<span style="font-size:10px;color:var(--gray-400);display:block;">from Excel</span>' : '')
             : `<span style="color:var(--gray-400);">—</span>`;
         const rateCell = rate > 0
             ? `${rate}%`
@@ -2897,6 +3031,12 @@ function addSelectedUICEntries() {
     const checked = [...document.querySelectorAll('.uic-pick-cb:checked')];
     if (!checked.length) { alert('Please select at least one entry.'); return; }
 
+    // If Excel source and no agent assigned, warn
+    if (_uicPickerSource === 'excel') {
+        const agentAssign = document.getElementById('uicExcelAgentAssign')?.value || '';
+        if (!agentAssign) { alert('Please select an agent to assign these commissions to before adding.'); return; }
+    }
+
     let commData = JSON.parse(localStorage.getItem('commissionData')) || {};
     let added = 0, skipped = 0;
 
@@ -2910,17 +3050,26 @@ function addSelectedUICEntries() {
         const lob         = e.lineOfBusiness;
         const paymentType = e.paymentType || 'Monthly Paid';
         const policyType  = e.policyType  || 'New';
-        const agent       = e.agent;
+        const agent       = e.agent || (document.getElementById('uicExcelAgentAssign')?.value || '');
         const month       = e.entryDate
             ? new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
             : getMonthYear();
 
-        if (!agent || !carrier || premium <= 0) { skipped++; return; }
+        if (!agent || !carrier) { skipped++; return; }
 
-        const rate = getCommissionRate(carrier, lob, paymentType, policyType);
-        if (rate <= 0) { skipped++; return; }
+        // Commission & rate: use Excel values if present, otherwise calculate from carrier rules
+        let commission, rate;
+        if (e._fromExcel && e._sourceCommission != null) {
+            commission = parseFloat(e._sourceCommission);
+            rate       = e._sourceRate || 0;
+        } else {
+            rate = getCommissionRate(carrier, lob, paymentType, policyType);
+            if (rate <= 0 || premium <= 0) { skipped++; return; }
+            commission = calculateCommission(premium, rate);
+        }
 
-        const commission  = calculateCommission(premium, rate);
+        if (isNaN(commission) || commission <= 0) { skipped++; return; }
+
         const carrierType = paymentType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
 
         if (!commData[agent])                         commData[agent] = { monthlyPaidCommissionCarriers: {}, grossPaidCarriers: {} };
@@ -2930,11 +3079,16 @@ function addSelectedUICEntries() {
         const existing = commData[agent][carrierType][carrier][month];
         if (existing) {
             existing.amount  = parseFloat((existing.amount  + commission).toFixed(2));
-            existing.premium = parseFloat((existing.premium + premium).toFixed(2));
-            if (existing.lob && existing.lob !== lob && !existing.lob.includes(lob))
+            existing.premium = parseFloat((existing.premium + (premium || 0)).toFixed(2));
+            if (lob && existing.lob !== lob && !existing.lob.includes(lob))
                 existing.lob = existing.lob + ', ' + lob;
         } else {
-            commData[agent][carrierType][carrier][month] = { amount: commission, lob, rate, premium };
+            commData[agent][carrierType][carrier][month] = {
+                amount:  parseFloat(commission.toFixed(2)),
+                lob:     lob || '',
+                rate:    rate,
+                premium: premium || 0
+            };
         }
         added++;
     });
@@ -2946,8 +3100,8 @@ function addSelectedUICEntries() {
     loadUniversalInsCommissions();
 
     const msg = added > 0
-        ? `✅ Added ${added} entr${added === 1 ? 'y' : 'ies'} to commissions.` + (skipped > 0 ? ` (${skipped} skipped — no rate rule found)` : '')
-        : `⚠️ No entries added — no commission rate rule found for the selected policies.`;
+        ? `✅ Added ${added} entr${added === 1 ? 'y' : 'ies'} to commissions.` + (skipped > 0 ? ` (${skipped} skipped)` : '')
+        : `⚠️ No entries added — check that entries have a carrier and commission value.`;
     alert(msg);
 }
 
