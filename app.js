@@ -2587,8 +2587,12 @@ function resetCommissionFilter() {
 }
 
 // ── Universal Ins Commissions (public page) ────────────────────
+let uicActiveYear = '';   // '' = All Years
+
 function showUniversalInsCommissions() {
     showSection('universalInsCommissionsSection');
+    uicActiveYear = '';
+    _uicUpdateYearButtons();
     loadUniversalInsCommissions();
     if (window.UIBMotion) {
         UIBMotion.animateUserInfoBar(document.getElementById('universalInsCommissionsSection'));
@@ -2597,15 +2601,38 @@ function showUniversalInsCommissions() {
     refreshIcons();
 }
 
+function setUICYear(year) {
+    // Toggle off if same year clicked again
+    uicActiveYear = (uicActiveYear === year) ? '' : year;
+    _uicUpdateYearButtons();
+    // Reset month dropdown so months from other years don't linger
+    const m = document.getElementById('uicMonthFilter');
+    if (m) { m.innerHTML = '<option value="">All Months</option>'; }
+    loadUniversalInsCommissions();
+}
+
+function _uicUpdateYearButtons() {
+    ['2023','2024','2025','2026'].forEach(y => {
+        const btn = document.getElementById('uicYear' + y);
+        if (!btn) return;
+        const active = uicActiveYear === y;
+        btn.style.background    = active ? 'var(--primary)' : '';
+        btn.style.color         = active ? '#fff' : '';
+        btn.style.borderColor   = active ? 'var(--primary)' : '';
+        btn.style.boxShadow     = active ? '0 0 0 2px rgba(59,130,246,0.25)' : '';
+    });
+}
+
 function loadUniversalInsCommissions() {
     const commissions = loadCommissionData();
     const filterAgent = document.getElementById('uicAgentFilter')?.value || '';
     const filterMonth = document.getElementById('uicMonthFilter')?.value || '';
+    const filterYear  = uicActiveYear;
 
     // Collect all rows
     let rows = [];
-    let allAgents = new Set();
-    let allMonths = new Set();
+    let allAgents   = new Set();
+    let allMonths   = new Set();
     let allCarriers = new Set();
     let totalAll = 0, totalMonthly = 0, totalGross = 0;
 
@@ -2634,41 +2661,51 @@ function loadUniversalInsCommissions() {
         processBucket(agentData.grossPaidCarriers, '💰 Gross Paid');
     }
 
-    // Populate filter dropdowns (only on first load or reset)
+    // Populate agent dropdown (rebuild each time so it reflects current data)
     const agentSel = document.getElementById('uicAgentFilter');
-    const monthSel = document.getElementById('uicMonthFilter');
-    if (agentSel && agentSel.options.length <= 1) {
+    if (agentSel) {
+        const prev = agentSel.value;
+        agentSel.innerHTML = '<option value="">All Agents</option>';
         [...allAgents].sort().forEach(a => {
             const o = document.createElement('option'); o.value = a; o.textContent = a;
+            if (a === prev) o.selected = true;
             agentSel.appendChild(o);
         });
     }
-    if (monthSel && monthSel.options.length <= 1) {
-        [...allMonths].sort().forEach(m => {
+
+    // Populate month dropdown — scoped to selected year
+    const monthSel = document.getElementById('uicMonthFilter');
+    if (monthSel) {
+        const prev = monthSel.value;
+        monthSel.innerHTML = '<option value="">All Months</option>';
+        const monthsForYear = filterYear
+            ? [...allMonths].filter(m => m.endsWith(filterYear))
+            : [...allMonths];
+        monthsForYear.sort().forEach(m => {
             const o = document.createElement('option'); o.value = m; o.textContent = m;
+            if (m === prev) o.selected = true;
             monthSel.appendChild(o);
         });
     }
 
     // Apply filters
+    if (filterYear)  rows = rows.filter(r => r.month.endsWith(filterYear));
     if (filterAgent) rows = rows.filter(r => r.agent === filterAgent);
     if (filterMonth) rows = rows.filter(r => r.month === filterMonth);
 
     // Recalculate totals after filter
-    if (filterAgent || filterMonth) {
-        totalAll = 0; totalMonthly = 0; totalGross = 0;
-        rows.forEach(r => {
-            totalAll += r.amount;
-            if (r.type === '📅 Monthly Paid') totalMonthly += r.amount;
-            else totalGross += r.amount;
-        });
-    }
+    totalAll = 0; totalMonthly = 0; totalGross = 0;
+    rows.forEach(r => {
+        totalAll += r.amount;
+        if (r.type === '📅 Monthly Paid') totalMonthly += r.amount;
+        else totalGross += r.amount;
+    });
 
     // Update stat cards
     document.getElementById('uicTotalCommissions').textContent = '$' + totalAll.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById('uicMonthlyPaid').textContent     = '$' + totalMonthly.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById('uicGrossPaid').textContent       = '$' + totalGross.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('uicAgentCount').textContent      = filterAgent ? 1 : allAgents.size;
+    document.getElementById('uicAgentCount').textContent      = [...new Set(rows.map(r => r.agent))].length;
     document.getElementById('uicCarrierCount').textContent    = [...new Set(rows.map(r => r.carrier))].length;
 
     // Render table
@@ -2704,6 +2741,8 @@ function loadUniversalInsCommissions() {
 }
 
 function resetUICFilters() {
+    uicActiveYear = '';
+    _uicUpdateYearButtons();
     const a = document.getElementById('uicAgentFilter');
     const m = document.getElementById('uicMonthFilter');
     if (a) a.value = '';

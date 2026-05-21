@@ -1383,6 +1383,13 @@
                         <strong style="font-size:16px;"><i data-lucide="dollar-sign"></i> Universal Ins Commissions</strong>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <!-- Year filter buttons -->
+                        <div style="display:flex;gap:4px;">
+                            <button id="uicYear2023" class="btn-secondary btn-sm" onclick="setUICYear('2023')" style="min-width:52px;font-weight:600;">2023</button>
+                            <button id="uicYear2024" class="btn-secondary btn-sm" onclick="setUICYear('2024')" style="min-width:52px;font-weight:600;">2024</button>
+                            <button id="uicYear2025" class="btn-secondary btn-sm" onclick="setUICYear('2025')" style="min-width:52px;font-weight:600;">2025</button>
+                            <button id="uicYear2026" class="btn-secondary btn-sm" onclick="setUICYear('2026')" style="min-width:52px;font-weight:600;">2026</button>
+                        </div>
                         <select id="uicAgentFilter" onchange="loadUniversalInsCommissions()" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                             <option value="">All Agents</option>
                         </select>
@@ -2296,7 +2303,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260521i"></script>
-    <script src="app.js?v=20260521i"></script>
+    <script src="motion.js?v=20260521j"></script>
+    <script src="app.js?v=20260521j"></script>
 </body>
 </html>
