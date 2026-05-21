@@ -2,7 +2,7 @@
 // GOOGLE DRIVE SYNC
 // ============================================================
 const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbypm1A3G5Wgf4onwSU-yk6FbmTOA-9in7HcFrg0YWL6UBdhNj4di7yVDNlflLYwaehI/exec";
-const SYNC_KEYS = ['binderData', 'agentMasterData', 'commissionData', 'carrierMasterData', 'agentCredentials', 'prospectData', 'verificationLogs'];
+const SYNC_KEYS = ['binderData', 'agentMasterData', 'commissionData', 'carrierMasterData', 'agentCredentials', 'prospectData', 'verificationLogs', 'commissionStatements'];
 
 async function driveGet(key) {
     try {
@@ -299,14 +299,24 @@ function initializeCredentials() {
 
 // ── Agent Email Login ──────────────────────────────────────────
 function openAgentEmailLogin() {
-    document.getElementById('agentLoginEmail').value = '';
+    const saved = localStorage.getItem('rememberedAgentEmail') || '';
+    document.getElementById('agentLoginEmail').value = saved;
     document.getElementById('agentLoginPassword').value = '';
     document.getElementById('agentLoginError').style.display = 'none';
+    const rememberBox = document.getElementById('rememberAgentEmail');
+    if (rememberBox) rememberBox.checked = !!saved;
     const m = document.getElementById('agentEmailLoginModal');
     m.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     refreshIcons();
-    setTimeout(() => document.getElementById('agentLoginEmail').focus(), 80);
+    setTimeout(() => {
+        const userField = document.getElementById('agentLoginEmail');
+        if (saved) {
+            document.getElementById('agentLoginPassword').focus();
+        } else {
+            userField.focus();
+        }
+    }, 80);
 }
 
 function closeAgentEmailLogin() {
@@ -537,6 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeCommissionData();
     initializeCarrierData();
     initializeAgentData();
+    initializeCommissionStatements();
     setTodayDate();
 
     ['agencyFee', 'agencyCommission'].forEach(id => {
@@ -2555,6 +2566,131 @@ function resetCommissionFilter() {
     displayAllCommissions(commissions);
 }
 
+// ── Universal Ins Commissions (public page) ────────────────────
+function showUniversalInsCommissions() {
+    showSection('universalInsCommissionsSection');
+    loadUniversalInsCommissions();
+    if (window.UIBMotion) {
+        UIBMotion.animateUserInfoBar(document.getElementById('universalInsCommissionsSection'));
+        UIBMotion.animateStatCards();
+    }
+    refreshIcons();
+}
+
+function loadUniversalInsCommissions() {
+    const commissions = loadCommissionData();
+    const filterAgent = document.getElementById('uicAgentFilter')?.value || '';
+    const filterMonth = document.getElementById('uicMonthFilter')?.value || '';
+
+    // Collect all rows
+    let rows = [];
+    let allAgents = new Set();
+    let allMonths = new Set();
+    let allCarriers = new Set();
+    let totalAll = 0, totalMonthly = 0, totalGross = 0;
+
+    for (const agent in commissions) {
+        allAgents.add(agent);
+        const agentData = commissions[agent];
+
+        const processBucket = (bucket, typeLabel) => {
+            Object.entries(bucket || {}).forEach(([carrier, months]) => {
+                allCarriers.add(carrier);
+                Object.entries(months).forEach(([month, entry]) => {
+                    allMonths.add(month);
+                    const amount  = typeof entry === 'object' ? (entry.amount  || 0) : (entry || 0);
+                    const lob     = typeof entry === 'object' ? (entry.lob     || '-') : '-';
+                    const rate    = typeof entry === 'object' ? (entry.rate    || 0)  : 0;
+                    const premium = typeof entry === 'object' ? (entry.premium || 0)  : 0;
+                    rows.push({ agent, type: typeLabel, carrier, lob, month, amount, rate, premium });
+                    totalAll += amount;
+                    if (typeLabel === '📅 Monthly Paid') totalMonthly += amount;
+                    else totalGross += amount;
+                });
+            });
+        };
+
+        processBucket(agentData.monthlyPaidCommissionCarriers, '📅 Monthly Paid');
+        processBucket(agentData.grossPaidCarriers, '💰 Gross Paid');
+    }
+
+    // Populate filter dropdowns (only on first load or reset)
+    const agentSel = document.getElementById('uicAgentFilter');
+    const monthSel = document.getElementById('uicMonthFilter');
+    if (agentSel && agentSel.options.length <= 1) {
+        [...allAgents].sort().forEach(a => {
+            const o = document.createElement('option'); o.value = a; o.textContent = a;
+            agentSel.appendChild(o);
+        });
+    }
+    if (monthSel && monthSel.options.length <= 1) {
+        [...allMonths].sort().forEach(m => {
+            const o = document.createElement('option'); o.value = m; o.textContent = m;
+            monthSel.appendChild(o);
+        });
+    }
+
+    // Apply filters
+    if (filterAgent) rows = rows.filter(r => r.agent === filterAgent);
+    if (filterMonth) rows = rows.filter(r => r.month === filterMonth);
+
+    // Recalculate totals after filter
+    if (filterAgent || filterMonth) {
+        totalAll = 0; totalMonthly = 0; totalGross = 0;
+        rows.forEach(r => {
+            totalAll += r.amount;
+            if (r.type === '📅 Monthly Paid') totalMonthly += r.amount;
+            else totalGross += r.amount;
+        });
+    }
+
+    // Update stat cards
+    document.getElementById('uicTotalCommissions').textContent = '$' + totalAll.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('uicMonthlyPaid').textContent     = '$' + totalMonthly.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('uicGrossPaid').textContent       = '$' + totalGross.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('uicAgentCount').textContent      = filterAgent ? 1 : allAgents.size;
+    document.getElementById('uicCarrierCount').textContent    = [...new Set(rows.map(r => r.carrier))].length;
+
+    // Render table
+    const tbody = document.getElementById('uicTableBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px;">No commission data found.</td></tr>';
+        document.getElementById('uicRowCount').textContent = '';
+        return;
+    }
+
+    // Sort: agent → month → carrier
+    rows.sort((a, b) => a.agent.localeCompare(b.agent) || a.month.localeCompare(b.month) || a.carrier.localeCompare(b.carrier));
+
+    tbody.innerHTML = rows.map((r, i) => {
+        const breakdown = r.rate > 0
+            ? `<span style="font-size:11px;color:var(--gray-400);display:block;">$${r.premium.toLocaleString('en-US',{minimumFractionDigits:2})} × ${r.rate}%</span>`
+            : '';
+        const bg = i % 2 === 0 ? '' : 'background:#f9fafb;';
+        return `<tr style="${bg}border-bottom:1px solid var(--gray-100);">
+            <td style="padding:10px 12px;font-weight:600;">${r.agent}</td>
+            <td style="padding:10px 12px;font-size:13px;">${r.type}</td>
+            <td style="padding:10px 12px;">${r.carrier}</td>
+            <td style="padding:10px 12px;font-size:13px;color:var(--gray-500);">${r.lob}</td>
+            <td style="padding:10px 12px;font-size:13px;color:var(--gray-500);">${r.month}</td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;">
+                $${r.amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                ${breakdown}
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('uicRowCount').textContent = `Showing ${rows.length} record${rows.length !== 1 ? 's' : ''}`;
+}
+
+function resetUICFilters() {
+    const a = document.getElementById('uicAgentFilter');
+    const m = document.getElementById('uicMonthFilter');
+    if (a) a.value = '';
+    if (m) m.value = '';
+    loadUniversalInsCommissions();
+}
+
 // Agent Commission Functions
 function showAgentCommissions() {
     document.getElementById('agentCommissionModal').classList.add('active');
@@ -2717,4 +2853,489 @@ function exportAgentCommissions() {
     a.href = url;
     a.download = `${agent}_commissions_${getEasternDateString()}.csv`;
     a.click();
+}
+
+// ================================================================
+// COMMISSION STATEMENTS — Excel Upload & Management
+// ================================================================
+let commissionStatements = {};
+let csCurrentMonthKey = null;
+let csCurrentWorkbook = null;
+let csParsedPreview = null;
+
+function initializeCommissionStatements() {
+    const stored = localStorage.getItem('commissionStatements');
+    commissionStatements = stored ? JSON.parse(stored) : {};
+}
+
+function saveCommissionStatements() {
+    localStorage.setItem('commissionStatements', JSON.stringify(commissionStatements));
+    driveSet('commissionStatements', commissionStatements);
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function showCommissionStatements() {
+    showSection('commissionStatementsSection');
+    loadCommissionStatementsList();
+    if (window.UIBMotion) UIBMotion.animateStatCards();
+    refreshIcons();
+}
+
+// ── Upload Modal ──────────────────────────────────────────────
+function openCommissionUploadModal() {
+    csResetUpload();
+    const m = document.getElementById('commissionUploadModal');
+    m.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
+    refreshIcons();
+}
+
+function closeCommissionUploadModal() {
+    document.getElementById('commissionUploadModal').classList.remove('active');
+}
+
+function csResetUpload() {
+    document.getElementById('csStep1').style.display = 'block';
+    document.getElementById('csStep2').style.display = 'none';
+    document.getElementById('csFileStatus').textContent = '';
+    const inp = document.getElementById('csFileInput');
+    if (inp) inp.value = '';
+    const importBtn = document.getElementById('csImportBtn');
+    if (importBtn) { importBtn.disabled = true; importBtn.style.opacity = '0.5'; }
+    csCurrentWorkbook = null;
+    csParsedPreview = null;
+}
+
+function handleCSFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('csFileStatus');
+    statusEl.innerHTML = '⏳ Parsing file…';
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            if (!window.XLSX) {
+                statusEl.innerHTML = '❌ SheetJS not loaded — please refresh and try again.';
+                return;
+            }
+            const data = new Uint8Array(e.target.result);
+            csCurrentWorkbook = XLSX.read(data, { type: 'array' });
+
+            // Populate sheet selector (skip reconciliation / annual sheets)
+            const sheetSel = document.getElementById('csSheetSelect');
+            sheetSel.innerHTML = '<option value="">-- Select a month --</option>';
+            const skip = ['reconcil', 'summary', 'annual', '2023 comm', '2024 comm', '2025 comm'];
+            csCurrentWorkbook.SheetNames.forEach(name => {
+                if (!skip.some(s => name.toLowerCase().includes(s))) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = csNormalizeSheetName(name);
+                    sheetSel.appendChild(opt);
+                }
+            });
+
+            document.getElementById('csStep1').style.display = 'none';
+            document.getElementById('csStep2').style.display = 'block';
+            document.getElementById('csPreviewArea').style.display = 'none';
+            statusEl.innerHTML = `✅ <strong>${file.name}</strong> loaded — ${csCurrentWorkbook.SheetNames.length} sheets found.`;
+        } catch (err) {
+            statusEl.innerHTML = '❌ Could not read file: ' + err.message;
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function csNormalizeSheetName(name) {
+    const MONTHS = {
+        jan:'January', feb:'February', mar:'March', marz:'March',
+        apr:'April', may:'May', jun:'June', jul:'July',
+        aug:'August', sept:'September', sep:'September',
+        oct:'October', nov:'November', dec:'December'
+    };
+    const clean = name.trim();
+
+    // "Jan25" / "Feb25"
+    let m = clean.match(/^([A-Za-z]+)\s*(\d{2})$/);
+    if (m) {
+        const mo = MONTHS[m[1].toLowerCase()];
+        if (mo) return `${mo} ${parseInt(m[2]) < 50 ? 2000 + parseInt(m[2]) : 1900 + parseInt(m[2])}`;
+    }
+    // "April 26" / "Oct 25"
+    m = clean.match(/^([A-Za-z]+)\s+(\d{2})$/);
+    if (m) {
+        const mo = MONTHS[m[1].toLowerCase()];
+        if (mo) return `${mo} ${parseInt(m[2]) < 50 ? 2000 + parseInt(m[2]) : 1900 + parseInt(m[2])}`;
+    }
+    // "Jun 2023" / "Jan 2024"
+    m = clean.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (m) {
+        const mo = MONTHS[m[1].toLowerCase()];
+        if (mo) return `${mo} ${m[2]}`;
+    }
+    return clean;
+}
+
+function previewCSSheet() {
+    const sheetName = document.getElementById('csSheetSelect').value;
+    const previewArea = document.getElementById('csPreviewArea');
+    const importBtn = document.getElementById('csImportBtn');
+
+    if (!sheetName || !csCurrentWorkbook) {
+        previewArea.style.display = 'none';
+        if (importBtn) { importBtn.disabled = true; importBtn.style.opacity = '0.5'; }
+        csParsedPreview = null;
+        return;
+    }
+
+    const ws = csCurrentWorkbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    const parsed = csParseSheetRows(rows);
+    csParsedPreview = { sheetName, ...parsed };
+
+    // Info bar
+    const carrierList = Object.keys(parsed.carrierTotals);
+    document.getElementById('csPreviewInfo').innerHTML =
+        `<strong>${parsed.entries.length} entries</strong> across <strong>${carrierList.length} carriers</strong> &nbsp;|&nbsp; ` +
+        `Gross Commission: <strong style="color:#059669;">$${parsed.grossTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong>`;
+
+    // Carrier breakdown preview table
+    const tbl = document.getElementById('csPreviewTable');
+    tbl.innerHTML =
+        `<thead><tr style="background:var(--gray-50);">
+            <th style="padding:7px 12px;text-align:left;font-size:12px;font-weight:600;">Carrier</th>
+            <th style="padding:7px 12px;text-align:center;font-size:12px;font-weight:600;">Policies</th>
+            <th style="padding:7px 12px;text-align:right;font-size:12px;font-weight:600;">Commission</th>
+         </tr></thead>` +
+        `<tbody>${carrierList.map(c => {
+            const cnt = parsed.entries.filter(e => e.carrier === c).length;
+            const tot = parsed.carrierTotals[c];
+            return `<tr style="border-bottom:1px solid var(--gray-100);">
+                <td style="padding:7px 12px;font-size:12px;">${c}</td>
+                <td style="padding:7px 12px;text-align:center;font-size:12px;">${cnt}</td>
+                <td style="padding:7px 12px;text-align:right;font-size:12px;font-weight:700;color:#059669;">
+                    $${tot.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                </td>
+            </tr>`;
+        }).join('')}</tbody>`;
+
+    previewArea.style.display = 'block';
+    if (importBtn) { importBtn.disabled = false; importBtn.style.opacity = '1'; }
+}
+
+function importSelectedSheet() {
+    if (!csParsedPreview) { alert('Please select a month sheet first.'); return; }
+
+    const { sheetName, entries, carrierTotals, grossTotal } = csParsedPreview;
+    const monthLabel = csNormalizeSheetName(sheetName);
+
+    // Cross-reference with binder book to find agent matches
+    const binder = JSON.parse(localStorage.getItem('binderData')) || [];
+    entries.forEach(entry => {
+        if (!entry.policyNumber) return;
+        const pn = entry.policyNumber.trim().replace(/\s+/g, '').toUpperCase();
+        const hit = binder.find(b => {
+            const bp = (b.policyNumber || b.binderNumber || '').toString().trim().replace(/\s+/g, '').toUpperCase();
+            return bp && bp === pn;
+        });
+        if (hit) entry.agentMatch = hit.agent || null;
+    });
+
+    commissionStatements[monthLabel] = {
+        month: monthLabel,
+        sheetName,
+        uploadedAt: new Date().toISOString(),
+        entries,
+        carrierTotals,
+        grossTotal,
+        entryCount: entries.length
+    };
+
+    saveCommissionStatements();
+    closeCommissionUploadModal();
+    csCurrentMonthKey = monthLabel;
+    loadCommissionStatementsList();
+}
+
+// ── Sheet Parser ──────────────────────────────────────────────
+function csParseSheetRows(rows) {
+    const entries = [];
+    let currentCarrier = '';
+    const carrierTotals = {};
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length === 0) continue;
+
+        const c0 = row[0], c1 = row[1];
+
+        // Carrier section header: col0 is a non-empty string, col1 is null or 'Client Name'
+        if (c0 && typeof c0 === 'string' && c0.trim() &&
+            (!c1 || typeof c1 !== 'string' || c1.trim().toLowerCase() === 'client name')) {
+            // Only update carrier if col1 is truly empty or a header label
+            if (!c1 || c1.toString().trim().toLowerCase() === 'client name') {
+                currentCarrier = c0.trim();
+            }
+            if (!c1 || c1.toString().trim().toLowerCase() === 'client name') continue;
+        }
+
+        // Must have a client name in col1
+        if (!c1 || typeof c1 !== 'string' || !c1.trim()) continue;
+        const clientName = c1.trim();
+        if (clientName.toLowerCase() === 'client name') continue;
+
+        // Detect format:
+        //  New (Jan25+):  col[5]=carrier, col[3]=txn, col[4]=LOB, col[8]=payType,
+        //                 col[9]=base, col[10]=written, col[11]=term, col[13]=policy#,
+        //                 col[14]=rate, col[15]=commission
+        //  Old (2023):    col[6]=carrier, col[4]=txn, col[7]=downPay, col[9]=payType,
+        //                 col[10]=base, col[11]=written, col[12]=term, col[14]=policy#,
+        //                 col[15]=rate, col[16]=commission
+        const isNew = typeof row[5] === 'string' && row[5].trim().length > 0;
+
+        let commission, rate, carrier, transaction, lob, status, paymentType,
+            basePremium, writtenPremium, term, policyNumber, downPayment;
+
+        if (isNew) {
+            commission    = typeof row[15] === 'number' ? row[15] : null;
+            rate          = typeof row[14] === 'number' ? row[14] : 0;
+            carrier       = row[5].trim();
+            transaction   = row[3] ? row[3].toString().trim() : '';
+            lob           = row[4] ? row[4].toString().trim() : '';
+            status        = row[2] ? row[2].toString().trim() : '';
+            paymentType   = typeof row[8] === 'string' ? row[8] : '';
+            basePremium   = typeof row[9]  === 'number' ? row[9]  : 0;
+            writtenPremium= typeof row[10] === 'number' ? row[10] : basePremium;
+            term          = typeof row[11] === 'number' ? row[11] : '';
+            policyNumber  = row[13] != null ? row[13].toString().trim() : '';
+            downPayment   = typeof row[6]  === 'number' ? row[6]  : 0;
+        } else {
+            // Old format — commission could be in col[16] or, for some rows, col[15]
+            const comm16  = typeof row[16] === 'number' ? row[16] : null;
+            const comm15  = typeof row[15] === 'number' ? row[15] : null;
+            commission    = comm16 !== null ? comm16 : comm15;
+            rate          = comm16 !== null ? (typeof row[15] === 'number' ? row[15] : 0)
+                                            : (typeof row[14] === 'number' ? row[14] : 0);
+            carrier       = (typeof row[6] === 'string' && row[6].trim()) ? row[6].trim() : currentCarrier;
+            transaction   = row[4] ? row[4].toString().trim() : '';
+            lob           = '';
+            status        = row[2] ? row[2].toString().trim() : '';
+            paymentType   = typeof row[9]  === 'string' ? row[9]  : '';
+            basePremium   = typeof row[10] === 'number' ? row[10] : 0;
+            writtenPremium= typeof row[11] === 'number' ? row[11] : basePremium;
+            term          = typeof row[12] === 'number' ? row[12] : '';
+            policyNumber  = row[14] != null ? row[14].toString().trim() : '';
+            downPayment   = typeof row[7]  === 'number' ? row[7]  : 0;
+        }
+
+        if (commission === null) continue;
+
+        const entry = {
+            clientName,
+            status,
+            transaction,
+            lob,
+            carrier: carrier || currentCarrier || 'Unknown',
+            downPayment,
+            paymentType,
+            basePremium,
+            writtenPremium,
+            term,
+            policyNumber,
+            rate,
+            commission,
+            agentMatch: null
+        };
+
+        entries.push(entry);
+        const ck = entry.carrier;
+        if (!carrierTotals[ck]) carrierTotals[ck] = 0;
+        carrierTotals[ck] += commission;
+    }
+
+    const grossTotal = entries.reduce((s, e) => s + e.commission, 0);
+    return { entries, carrierTotals, grossTotal };
+}
+
+// ── List & Detail Views ───────────────────────────────────────
+function loadCommissionStatementsList() {
+    const months = Object.keys(commissionStatements);
+    const emptyEl  = document.getElementById('csEmptyState');
+    const detailEl = document.getElementById('csDetail');
+    const tabsEl   = document.getElementById('csMonthTabs');
+
+    if (!months.length) {
+        emptyEl.style.display  = 'block';
+        detailEl.style.display = 'none';
+        tabsEl.innerHTML = '';
+        return;
+    }
+
+    emptyEl.style.display = 'none';
+
+    // Sort months chronologically
+    const MO_IDX = {january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+    months.sort((a, b) => {
+        const parse = s => { const p = s.split(' '); return parseInt(p[1] || 0)*13 + (MO_IDX[p[0].toLowerCase()] || 0); };
+        return parse(a) - parse(b);
+    });
+
+    if (!csCurrentMonthKey || !commissionStatements[csCurrentMonthKey]) {
+        csCurrentMonthKey = months[months.length - 1];
+    }
+
+    tabsEl.innerHTML = months.map(m => {
+        const stmt = commissionStatements[m];
+        const active = m === csCurrentMonthKey;
+        return `<button onclick="csSelectMonth('${m.replace(/'/g,'\\\'')}')"
+            style="padding:8px 14px;border:1px solid ${active?'var(--primary)':'var(--gray-200)'};
+                   border-radius:var(--radius-sm);background:${active?'var(--primary)':'#fff'};
+                   color:${active?'#fff':'var(--gray-600)'};font-size:13px;font-weight:${active?'700':'400'};
+                   cursor:pointer;line-height:1.4;text-align:center;">
+            ${m}
+            <span style="display:block;font-size:11px;opacity:0.85;">$${stmt.grossTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        </button>`;
+    }).join('');
+
+    renderCSMonthDetail(csCurrentMonthKey);
+}
+
+function csSelectMonth(monthKey) {
+    csCurrentMonthKey = monthKey;
+    loadCommissionStatementsList();
+}
+
+function renderCSMonthDetail(monthKey) {
+    const stmt = commissionStatements[monthKey];
+    if (!stmt) return;
+
+    document.getElementById('csDetail').style.display = 'block';
+
+    const matchedCount = stmt.entries.filter(e => e.agentMatch).length;
+    const newCount     = stmt.entries.filter(e => /new/i.test(e.transaction)).length;
+    const renewalCount = stmt.entries.filter(e => /renewal|renew/i.test(e.transaction)).length;
+    const adjCount     = stmt.entries.length - newCount - renewalCount;
+
+    document.getElementById('csGrossTotal').textContent    = '$' + stmt.grossTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('csPolicyCount').textContent   = stmt.entryCount;
+    document.getElementById('csCarrierCount2').textContent = Object.keys(stmt.carrierTotals).length;
+    document.getElementById('csMatchedCount').textContent  = matchedCount;
+    document.getElementById('csNewCount').textContent      = newCount;
+    document.getElementById('csRenewalCount').textContent  = renewalCount;
+
+    // Carrier breakdown
+    const breakdownBody = document.getElementById('csCarrierBreakdownBody');
+    breakdownBody.innerHTML = Object.entries(stmt.carrierTotals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([carrier, total]) => {
+            const cnt = stmt.entries.filter(e => e.carrier === carrier).length;
+            const pct = stmt.grossTotal !== 0 ? ((total / stmt.grossTotal) * 100).toFixed(1) : '0.0';
+            const barW = Math.abs(pct);
+            return `<tr style="border-bottom:1px solid var(--gray-100);">
+                <td style="padding:9px 12px;font-weight:600;">${carrier}</td>
+                <td style="padding:9px 12px;text-align:center;">${cnt}</td>
+                <td style="padding:9px 12px;text-align:right;font-weight:700;color:${total>=0?'#059669':'#dc2626'};">
+                    $${total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                </td>
+                <td style="padding:9px 12px;min-width:120px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <div style="flex:1;height:8px;background:var(--gray-100);border-radius:999px;overflow:hidden;">
+                            <div style="height:100%;width:${barW}%;background:#059669;border-radius:999px;"></div>
+                        </div>
+                        <span style="font-size:11px;color:var(--gray-500);white-space:nowrap;">${pct}%</span>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+    // Reset filters
+    const csCarrFilter = document.getElementById('csCarrierFilter');
+    csCarrFilter.innerHTML = '<option value="">All Carriers</option>';
+    Object.keys(stmt.carrierTotals).sort().forEach(c => {
+        const o = document.createElement('option'); o.value = c; o.textContent = c;
+        csCarrFilter.appendChild(o);
+    });
+
+    const csTxnFilt = document.getElementById('csTxnFilter');
+    csTxnFilt.innerHTML = '<option value="">All Types</option>';
+    [...new Set(stmt.entries.map(e => e.transaction).filter(Boolean))].sort().forEach(t => {
+        const o = document.createElement('option'); o.value = t; o.textContent = t;
+        csTxnFilt.appendChild(o);
+    });
+
+    renderCSEntries(monthKey);
+    if (window.UIBMotion) UIBMotion.animateStatCards();
+    refreshIcons();
+}
+
+function renderCSEntries(monthKey) {
+    const stmt = commissionStatements[monthKey];
+    if (!stmt) return;
+
+    const filterCarrier = document.getElementById('csCarrierFilter')?.value  || '';
+    const filterTxn     = document.getElementById('csTxnFilter')?.value      || '';
+    const filterAgent   = document.getElementById('csAgentMatchFilter')?.value || '';
+
+    let rows = stmt.entries;
+    if (filterCarrier) rows = rows.filter(r => r.carrier === filterCarrier);
+    if (filterTxn)     rows = rows.filter(r => r.transaction === filterTxn);
+    if (filterAgent === 'matched')   rows = rows.filter(r =>  r.agentMatch);
+    if (filterAgent === 'unmatched') rows = rows.filter(r => !r.agentMatch);
+
+    const tbody = document.getElementById('csEntriesBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--gray-400);">No entries match the current filters.</td></tr>';
+        document.getElementById('csEntryCountLabel').textContent = '';
+        return;
+    }
+
+    tbody.innerHTML = rows.map((e, i) => {
+        const bg = i % 2 === 0 ? '' : 'background:#f9fafb;';
+        const tl = e.transaction.toLowerCase();
+        const txnColor = tl.includes('new')                       ? '#059669'
+                       : (tl.includes('can') || tl.includes('end')) ? '#dc2626'
+                       : '#6366f1';
+        const commColor = e.commission >= 0 ? '#059669' : '#dc2626';
+        const agentBadge = e.agentMatch
+            ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${e.agentMatch}</span>`
+            : `<span style="background:#f3f4f6;color:var(--gray-400);padding:2px 8px;border-radius:999px;font-size:11px;">—</span>`;
+
+        return `<tr style="${bg}border-bottom:1px solid var(--gray-100);">
+            <td style="padding:8px 10px;font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.clientName}">${e.clientName}</td>
+            <td style="padding:8px 10px;font-size:12px;color:${txnColor};font-weight:600;">${e.transaction}</td>
+            <td style="padding:8px 10px;font-size:12px;">${e.carrier}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--gray-500);">${e.lob || '—'}</td>
+            <td style="padding:8px 10px;font-size:12px;text-align:right;">${e.basePremium>0?'$'+e.basePremium.toLocaleString('en-US',{minimumFractionDigits:2}):'—'}</td>
+            <td style="padding:8px 10px;font-size:12px;text-align:right;">${e.rate>0?(e.rate*100).toFixed(0)+'%':'—'}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:700;color:${commColor};">$${e.commission.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+            <td style="padding:8px 10px;">${agentBadge}</td>
+        </tr>`;
+    }).join('');
+
+    const filteredTotal = rows.reduce((s, r) => s + r.commission, 0);
+    document.getElementById('csEntryCountLabel').innerHTML =
+        `Showing <strong>${rows.length}</strong> of ${stmt.entryCount} entries &nbsp;|&nbsp; ` +
+        `Filtered Total: <strong style="color:#059669;">$${filteredTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong>`;
+}
+
+function filterCSEntries() {
+    if (csCurrentMonthKey) renderCSEntries(csCurrentMonthKey);
+}
+
+function resetCSFilters() {
+    ['csCarrierFilter','csTxnFilter','csAgentMatchFilter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    filterCSEntries();
+}
+
+function deleteCSStatement(monthKey) {
+    if (!monthKey) return;
+    if (!confirm(`Delete the commission statement for ${monthKey}? This cannot be undone.`)) return;
+    delete commissionStatements[monthKey];
+    saveCommissionStatements();
+    csCurrentMonthKey = null;
+    loadCommissionStatementsList();
 }

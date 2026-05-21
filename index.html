@@ -591,6 +591,13 @@
                         <button class="btn-success login-action-btn" onclick="showProspectsSection()"><i data-lucide="users"></i> View Prospects</button>
                         <button class="btn-purple login-action-btn" onclick="showVerificationLogsSection()"><i data-lucide="list"></i> View Verification Logs</button>
                     </div>
+
+                    <!-- Universal Ins Commissions Button -->
+                    <div style="margin-top:12px;max-width:720px;margin-left:auto;margin-right:auto;">
+                        <button class="btn-warning login-action-btn" style="width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:700;letter-spacing:0.3px;" onclick="showUniversalInsCommissions()">
+                            <i data-lucide="dollar-sign"></i> Universal Ins Commissions
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -607,9 +614,13 @@
                             <label>Username</label>
                             <input type="text" id="agentLoginEmail" placeholder="Enter your username" required style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;">
                         </div>
-                        <div class="form-group" style="margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
                             <label>Password</label>
                             <input type="password" id="agentLoginPassword" placeholder="••••••••" required style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+                            <input type="checkbox" id="rememberAgentEmail" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;">
+                            <label for="rememberAgentEmail" style="font-size:13px;color:var(--gray-500);cursor:pointer;margin:0;">Remember my username</label>
                         </div>
                         <button type="submit" class="btn-primary" style="width:100%;padding:12px;">
                             <i data-lucide="log-in"></i> Sign In
@@ -1364,6 +1375,184 @@
                 </div>
             </div>
 
+            <!-- Universal Ins Commissions Section -->
+            <div id="universalInsCommissionsSection" class="section">
+                <div class="user-info" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <button class="btn-secondary btn-sm" onclick="showSection('loginSection')"><i data-lucide="arrow-left"></i> Back</button>
+                        <strong style="font-size:16px;"><i data-lucide="dollar-sign"></i> Universal Ins Commissions</strong>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <select id="uicAgentFilter" onchange="loadUniversalInsCommissions()" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                            <option value="">All Agents</option>
+                        </select>
+                        <select id="uicMonthFilter" onchange="loadUniversalInsCommissions()" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                            <option value="">All Months</option>
+                        </select>
+                        <button class="btn-secondary btn-sm" onclick="resetUICFilters()"><i data-lucide="rotate-ccw"></i> Reset</button>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:18px 0;">
+                    <div class="stat-card" style="border-left:4px solid #f59e0b;">
+                        <div class="label">Total Commissions</div>
+                        <div class="number" id="uicTotalCommissions">$0.00</div>
+                    </div>
+                    <div class="stat-card" style="border-left:4px solid #10b981;">
+                        <div class="label">Monthly Paid</div>
+                        <div class="number" id="uicMonthlyPaid">$0.00</div>
+                    </div>
+                    <div class="stat-card" style="border-left:4px solid #6366f1;">
+                        <div class="label">Gross Paid</div>
+                        <div class="number" id="uicGrossPaid">$0.00</div>
+                    </div>
+                    <div class="stat-card" style="border-left:4px solid #3b82f6;">
+                        <div class="label">Agents</div>
+                        <div class="number" id="uicAgentCount">0</div>
+                    </div>
+                    <div class="stat-card" style="border-left:4px solid #ec4899;">
+                        <div class="label">Carriers</div>
+                        <div class="number" id="uicCarrierCount">0</div>
+                    </div>
+                </div>
+
+                <!-- Commission Table -->
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <thead>
+                            <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200);">
+                                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--gray-600);">Agent</th>
+                                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--gray-600);">Type</th>
+                                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--gray-600);">Carrier</th>
+                                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--gray-600);">LOB</th>
+                                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--gray-600);">Month</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--gray-600);">Commission</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uicTableBody">
+                            <tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px;">No commission data available.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="uicRowCount" style="margin-top:10px;font-size:13px;color:var(--gray-500);"></p>
+            </div>
+
+            <!-- Commission Statements Section -->
+            <div id="commissionStatementsSection" class="section">
+                <div class="user-info" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <button class="btn-secondary btn-sm" onclick="showSection('adminSection')"><i data-lucide="arrow-left"></i> Back</button>
+                        <strong style="font-size:16px;"><i data-lucide="file-spreadsheet"></i> Commission Statements</strong>
+                    </div>
+                    <button class="btn-primary btn-sm" onclick="openCommissionUploadModal()"><i data-lucide="upload"></i> Upload Statement</button>
+                </div>
+
+                <!-- Month Tabs -->
+                <div id="csMonthTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 4px;"></div>
+
+                <!-- Empty State -->
+                <div id="csEmptyState" style="text-align:center;padding:60px 20px;color:var(--gray-400);display:none;">
+                    <div style="font-size:52px;margin-bottom:16px;">📋</div>
+                    <h3 style="color:var(--gray-400);font-weight:600;margin-bottom:8px;">No Commission Statements Yet</h3>
+                    <p style="margin-bottom:20px;font-size:14px;">Upload your monthly carrier commission Excel file to get started.</p>
+                    <button class="btn-primary" onclick="openCommissionUploadModal()"><i data-lucide="upload"></i> Upload First Statement</button>
+                </div>
+
+                <!-- Detail Area (shown when a month is selected) -->
+                <div id="csDetail" style="display:none;">
+
+                    <!-- Stat Cards -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;">
+                        <div class="stat-card" style="border-left:4px solid #f59e0b;">
+                            <div class="label">Gross Commission</div>
+                            <div class="number" id="csGrossTotal">$0.00</div>
+                        </div>
+                        <div class="stat-card" style="border-left:4px solid #3b82f6;">
+                            <div class="label">Total Policies</div>
+                            <div class="number" id="csPolicyCount">0</div>
+                        </div>
+                        <div class="stat-card" style="border-left:4px solid #6366f1;">
+                            <div class="label">Carriers</div>
+                            <div class="number" id="csCarrierCount2">0</div>
+                        </div>
+                        <div class="stat-card" style="border-left:4px solid #10b981;">
+                            <div class="label">New Policies</div>
+                            <div class="number" id="csNewCount">0</div>
+                        </div>
+                        <div class="stat-card" style="border-left:4px solid #8b5cf6;">
+                            <div class="label">Renewals</div>
+                            <div class="number" id="csRenewalCount">0</div>
+                        </div>
+                        <div class="stat-card" style="border-left:4px solid #ec4899;">
+                            <div class="label">Agent Matches</div>
+                            <div class="number" id="csMatchedCount">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Carrier Breakdown -->
+                    <div style="margin-bottom:22px;">
+                        <h4 style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;"><i data-lucide="building-2"></i> Commission by Carrier</h4>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead>
+                                    <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200);">
+                                        <th style="padding:9px 12px;text-align:left;font-weight:600;color:var(--gray-600);">Carrier</th>
+                                        <th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--gray-600);">Policies</th>
+                                        <th style="padding:9px 12px;text-align:right;font-weight:600;color:var(--gray-600);">Commission</th>
+                                        <th style="padding:9px 12px;font-weight:600;color:var(--gray-600);">Share</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="csCarrierBreakdownBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Filters + Entry Table -->
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                            <h4 style="font-size:14px;font-weight:700;color:var(--navy);margin:0;"><i data-lucide="list"></i> Policy Entries</h4>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                                <select id="csCarrierFilter" onchange="filterCSEntries()" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:12px;">
+                                    <option value="">All Carriers</option>
+                                </select>
+                                <select id="csTxnFilter" onchange="filterCSEntries()" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:12px;">
+                                    <option value="">All Types</option>
+                                </select>
+                                <select id="csAgentMatchFilter" onchange="filterCSEntries()" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:12px;">
+                                    <option value="">All Entries</option>
+                                    <option value="matched">Matched to Agent</option>
+                                    <option value="unmatched">Unmatched</option>
+                                </select>
+                                <button class="btn-secondary btn-sm" onclick="resetCSFilters()"><i data-lucide="rotate-ccw"></i> Reset</button>
+                                <button class="btn-danger btn-sm" onclick="deleteCSStatement(csCurrentMonthKey)"><i data-lucide="trash-2"></i> Delete Month</button>
+                            </div>
+                        </div>
+
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead>
+                                    <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200);">
+                                        <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Client Name</th>
+                                        <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Type</th>
+                                        <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Carrier</th>
+                                        <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">LOB</th>
+                                        <th style="padding:9px 10px;text-align:right;font-weight:600;color:var(--gray-600);">Premium</th>
+                                        <th style="padding:9px 10px;text-align:right;font-weight:600;color:var(--gray-600);">Rate</th>
+                                        <th style="padding:9px 10px;text-align:right;font-weight:600;color:var(--gray-600);">Commission</th>
+                                        <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Agent</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="csEntriesBody">
+                                    <tr><td colspan="8" style="text-align:center;color:var(--gray-400);padding:32px;">Select a month above to view entries.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p id="csEntryCountLabel" style="margin-top:10px;font-size:13px;color:var(--gray-500);"></p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Admin Dashboard -->
             <div id="adminSection" class="section">
                 <div class="user-info">
@@ -1427,6 +1616,7 @@
                     <button class="btn-primary" onclick="exportAllData()"><i data-lucide="download"></i> Export CSV</button>
                     <button class="btn-success" onclick="exportToExcel()"><i data-lucide="file-spreadsheet"></i> Export Excel</button>
                     <button class="btn-primary" onclick="showCommissionDashboard()"><i data-lucide="trending-up"></i> Commissions</button>
+                    <button class="btn-success" onclick="showCommissionStatements()"><i data-lucide="file-spreadsheet"></i> Commission Statements</button>
                     <button class="btn-primary" onclick="showCarrierManagement()"><i data-lucide="building-2"></i> Carriers</button>
                     <button class="btn-primary" onclick="showAgentManagement()"><i data-lucide="users"></i> Agents</button>
                     <button class="btn-primary" onclick="openCredentialManager()"><i data-lucide="key"></i> Credentials</button>
@@ -2054,9 +2244,59 @@
         </div>
     </div>
 
+    <!-- Commission Upload Modal -->
+    <div id="commissionUploadModal" class="modal">
+        <div class="modal-content" style="max-width:600px;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="margin:0;"><i data-lucide="upload"></i> Upload Commission Statement</h3>
+                <button class="btn-danger btn-sm" onclick="closeCommissionUploadModal()">✕ Close</button>
+            </div>
+
+            <!-- Step 1: File Selection -->
+            <div id="csStep1">
+                <div style="border:2px dashed var(--gray-200);border-radius:var(--radius-md);padding:40px 24px;text-align:center;background:var(--gray-50);margin-bottom:14px;">
+                    <div style="font-size:44px;margin-bottom:12px;">📂</div>
+                    <p style="color:var(--gray-500);margin-bottom:18px;font-size:14px;">Select your monthly commission Excel file <strong>(.xlsx)</strong></p>
+                    <label for="csFileInput" class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:10px 22px;">
+                        <i data-lucide="file-spreadsheet"></i> Browse File
+                    </label>
+                    <input type="file" id="csFileInput" accept=".xlsx,.xls" onchange="handleCSFileSelect(event)" style="display:none;">
+                </div>
+                <p id="csFileStatus" style="font-size:13px;color:var(--gray-500);text-align:center;min-height:18px;"></p>
+            </div>
+
+            <!-- Step 2: Sheet selection + preview -->
+            <div id="csStep2" style="display:none;">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:6px;display:block;">Select Month Sheet</label>
+                    <select id="csSheetSelect" onchange="previewCSSheet()" style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;">
+                        <option value="">-- Select a month --</option>
+                    </select>
+                </div>
+
+                <!-- Preview area (shown after sheet selected) -->
+                <div id="csPreviewArea" style="display:none;margin-bottom:18px;">
+                    <p id="csPreviewInfo" style="font-size:13px;color:var(--gray-700);padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-sm);margin-bottom:10px;"></p>
+                    <div style="overflow:auto;max-height:220px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);">
+                        <table id="csPreviewTable" style="width:100%;border-collapse:collapse;font-size:12px;"></table>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn-secondary" onclick="csResetUpload()"><i data-lucide="arrow-left"></i> Different File</button>
+                    <button class="btn-success" onclick="importSelectedSheet()" id="csImportBtn" disabled style="opacity:0.5;">
+                        <i data-lucide="download"></i> Import Statement
+                    </button>
+                </div>
+                <p id="csFileStatus2" style="font-size:12px;color:var(--gray-400);text-align:center;margin-top:10px;"></p>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260521c"></script>
-    <script src="app.js?v=20260521c"></script>
+    <script src="motion.js?v=20260521f"></script>
+    <script src="app.js?v=20260521f"></script>
 </body>
 </html>
