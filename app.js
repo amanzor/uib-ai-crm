@@ -299,17 +299,57 @@ function initializeCredentials() {
 
 // ── Agent Email Login ──────────────────────────────────────────
 function openAgentEmailLogin() {
-    // Restore saved username if remembered
-    const saved = localStorage.getItem('rememberedAgentEmail') || '';
-    document.getElementById('agentLoginEmail').value = saved;
-    document.getElementById('agentLoginPassword').value = '';
-    document.getElementById('agentLoginError').style.display = 'none';
-    const rememberBox = document.getElementById('rememberAgentEmail');
-    if (rememberBox) rememberBox.checked = !!saved;
+    showAgentPicker();
     const m = document.getElementById('agentEmailLoginModal');
     m.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     refreshIcons();
+}
+
+function showAgentPicker() {
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    // Show all agents that have a password set
+    const agentNames = Array.from(new Set([...AGENTS, ...Object.keys(credentials)]));
+
+    const list = document.getElementById('agentPickerList');
+    list.innerHTML = agentNames.map(name => {
+        const cred = credentials[name] || {};
+        const hasPass = typeof cred === 'string' ? !!cred : !!(cred.password);
+        if (!hasPass) return '';
+        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        return `
+        <button type="button" onclick="selectAgentForLogin('${name}')"
+            style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--gray-50);
+                   border:1.5px solid var(--gray-200);border-radius:var(--radius-md);cursor:pointer;
+                   font-size:14px;font-weight:600;color:var(--navy);transition:all .15s;text-align:left;width:100%;"
+            onmouseover="this.style.background='var(--blue-pale)';this.style.borderColor='var(--blue-light)'"
+            onmouseout="this.style.background='var(--gray-50)';this.style.borderColor='var(--gray-200)'">
+            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--navy));
+                        color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">
+                ${initials}
+            </div>
+            <span>${name}</span>
+        </button>`;
+    }).join('');
+
+    document.getElementById('agentPickerStep').style.display = 'block';
+    document.getElementById('agentPasswordStep').style.display = 'none';
+    document.getElementById('agentLoginTitle').innerHTML = '<i data-lucide="log-in"></i> Agent Login';
+    refreshIcons();
+}
+
+function selectAgentForLogin(agentName) {
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    const cred = credentials[agentName] || {};
+    // Store the agent name as the login key
+    document.getElementById('agentLoginEmail').value = agentName;
+    document.getElementById('agentLoginPassword').value = '';
+    document.getElementById('agentLoginError').style.display = 'none';
+    document.getElementById('agentPickerStep').style.display = 'none';
+    document.getElementById('agentPasswordStep').style.display = 'block';
+    document.getElementById('agentLoginTitle').innerHTML = `<i data-lucide="log-in"></i> Sign in as ${agentName.split(' ')[0]}`;
+    refreshIcons();
+    setTimeout(() => document.getElementById('agentLoginPassword').focus(), 80);
 }
 
 function closeAgentEmailLogin() {
@@ -334,21 +374,21 @@ function submitAgentEmailLogin(e) {
         return '';
     }
 
-    // Match by: email, OR full agent name, OR first name only
+    // Match by: exact agent name (from picker), OR email, OR full name, OR first name
     const match = Object.entries(credentials).find(([name, cred]) => {
         const storedPass  = getStoredPassword(cred);
         const storedEmail = getStoredEmail(cred);
         const firstName   = name.split(' ')[0].toLowerCase();
 
+        const byName      = name === input || name.toLowerCase() === input;
         const byEmail     = storedEmail && storedEmail === input;
-        const byFullName  = name.toLowerCase() === input;
         const byFirstName = firstName === input;
 
-        return (byEmail || byFullName || byFirstName) && storedPass === password;
+        return (byName || byEmail || byFirstName) && storedPass === password;
     });
 
     if (!match) {
-        errEl.textContent = 'Incorrect username or password. Try your full name (e.g. "Alberto Manzor") and your password.';
+        errEl.textContent = 'Incorrect password. Please try again.';
         errEl.style.display = 'block';
         return;
     }
