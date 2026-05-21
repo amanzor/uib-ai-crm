@@ -1381,6 +1381,7 @@
                     <div style="display:flex;align-items:center;gap:10px;">
                         <button class="btn-secondary btn-sm" onclick="showSection('loginSection')"><i data-lucide="arrow-left"></i> Back</button>
                         <strong style="font-size:16px;"><i data-lucide="dollar-sign"></i> Universal Ins Commissions</strong>
+                        <button class="btn-primary btn-sm" onclick="openUICEntryPicker()"><i data-lucide="plus"></i> New Entry</button>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                         <!-- Year filter buttons -->
@@ -1443,6 +1444,71 @@
                     </table>
                 </div>
                 <p id="uicRowCount" style="margin-top:10px;font-size:13px;color:var(--gray-500);"></p>
+            </div>
+
+            <!-- UIC Entry Picker Modal -->
+            <div id="uicEntryPickerModal" class="modal">
+                <div class="modal-content" style="max-width:960px;max-height:90vh;display:flex;flex-direction:column;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0;">
+                        <h3 style="margin:0;"><i data-lucide="plus-circle"></i> Select Policy Entries to Add</h3>
+                        <button class="btn-secondary btn-sm" onclick="closeUICEntryPicker()"><i data-lucide="x"></i> Close</button>
+                    </div>
+
+                    <!-- Search & filters -->
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;flex-shrink:0;">
+                        <input id="uicPickerSearch" type="text" placeholder="Search customer, carrier, policy #…"
+                            oninput="filterUICEntryList()"
+                            style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                        <select id="uicPickerAgentFilter" onchange="filterUICEntryList()"
+                            style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                            <option value="">All Agents</option>
+                        </select>
+                        <select id="uicPickerYearFilter" onchange="filterUICEntryList()"
+                            style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                            <option value="">All Years</option>
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:0 4px;">
+                            <input type="checkbox" id="uicPickerSelectAll" onchange="toggleUICSelectAll(this.checked)" style="width:15px;height:15px;accent-color:var(--primary);">
+                            Select all visible
+                        </label>
+                    </div>
+
+                    <!-- Entry table -->
+                    <div style="overflow-y:auto;flex:1;border:1px solid var(--gray-200);border-radius:var(--radius-sm);">
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead style="position:sticky;top:0;background:#fff;z-index:1;">
+                                <tr style="border-bottom:2px solid var(--gray-200);">
+                                    <th style="padding:9px 10px;width:36px;"></th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Date</th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Agent</th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Customer</th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Carrier</th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">LOB</th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Type</th>
+                                    <th style="padding:9px 10px;text-align:right;font-weight:600;color:var(--gray-600);">Premium</th>
+                                    <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--gray-600);">Policy #</th>
+                                    <th style="padding:9px 10px;text-align:right;font-weight:600;color:var(--gray-600);">Est. Commission</th>
+                                </tr>
+                            </thead>
+                            <tbody id="uicPickerTableBody">
+                                <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--gray-400);">No entries found.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-shrink:0;">
+                        <span id="uicPickerSelCount" style="font-size:13px;color:var(--gray-500);">0 entries selected</span>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-secondary" onclick="closeUICEntryPicker()">Cancel</button>
+                            <button class="btn-primary" onclick="addSelectedUICEntries()"><i data-lucide="check"></i> Add Selected to Commissions</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Commission Statements Section -->
@@ -2303,7 +2369,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260521j"></script>
-    <script src="app.js?v=20260521j"></script>
+    <script src="motion.js?v=20260521k"></script>
+    <script src="app.js?v=20260521k"></script>
 </body>
 </html>

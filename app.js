@@ -2750,6 +2750,175 @@ function resetUICFilters() {
     loadUniversalInsCommissions();
 }
 
+// ── UIC Entry Picker ───────────────────────────────────────────
+let _uicPickerEntries = [];   // full list, rebuilt on open
+
+function openUICEntryPicker() {
+    const modal = document.getElementById('uicEntryPickerModal');
+    if (!modal) return;
+
+    // Populate agent filter
+    const agentSel = document.getElementById('uicPickerAgentFilter');
+    if (agentSel) {
+        agentSel.innerHTML = '<option value="">All Agents</option>';
+        const agents = [...new Set((JSON.parse(localStorage.getItem('binderData')) || []).map(e => e.agent).filter(Boolean))].sort();
+        agents.forEach(a => {
+            const o = document.createElement('option'); o.value = a; o.textContent = a;
+            agentSel.appendChild(o);
+        });
+    }
+
+    // Reset inputs
+    const search = document.getElementById('uicPickerSearch');
+    if (search) search.value = '';
+    const yearSel = document.getElementById('uicPickerYearFilter');
+    if (yearSel) yearSel.value = '';
+    const selectAll = document.getElementById('uicPickerSelectAll');
+    if (selectAll) selectAll.checked = false;
+
+    modal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
+    refreshIcons();
+    filterUICEntryList();
+}
+
+function closeUICEntryPicker() {
+    document.getElementById('uicEntryPickerModal')?.classList.remove('active');
+}
+
+function filterUICEntryList() {
+    const search    = (document.getElementById('uicPickerSearch')?.value || '').toLowerCase();
+    const agentF    = document.getElementById('uicPickerAgentFilter')?.value || '';
+    const yearF     = document.getElementById('uicPickerYearFilter')?.value  || '';
+
+    const all = JSON.parse(localStorage.getItem('binderData')) || [];
+
+    _uicPickerEntries = all.filter(e => {
+        if (agentF && e.agent !== agentF) return false;
+        if (yearF  && e.entryDate && !e.entryDate.startsWith(yearF)) return false;
+        if (search) {
+            const haystack = [e.customerName, e.company, e.policyNumber, e.lineOfBusiness, e.agent].join(' ').toLowerCase();
+            if (!haystack.includes(search)) return false;
+        }
+        return true;
+    });
+
+    // Reset select-all checkbox
+    const selectAll = document.getElementById('uicPickerSelectAll');
+    if (selectAll) selectAll.checked = false;
+
+    _renderUICPickerTable();
+}
+
+function _renderUICPickerTable() {
+    const tbody = document.getElementById('uicPickerTableBody');
+    if (!tbody) return;
+
+    if (!_uicPickerEntries.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--gray-400);">No entries match your search.</td></tr>';
+        document.getElementById('uicPickerSelCount').textContent = '0 entries selected';
+        return;
+    }
+
+    tbody.innerHTML = _uicPickerEntries.map((e, idx) => {
+        const premium = parseFloat(e.basePremium) || 0;
+        const rate    = getCommissionRate(e.company, e.lineOfBusiness, e.paymentType || 'Monthly Paid', e.policyType || 'New');
+        const estComm = rate > 0 ? calculateCommission(premium, rate) : null;
+        const commCell = estComm != null
+            ? `<span style="color:#059669;font-weight:700;">$${estComm.toFixed(2)}</span><span style="font-size:11px;color:var(--gray-400);display:block;">${rate}% of $${premium.toLocaleString()}</span>`
+            : `<span style="color:var(--gray-400);font-size:12px;">No rule</span>`;
+        const date = e.entryDate || '';
+        const bg   = idx % 2 === 0 ? '' : 'background:#f9fafb;';
+        return `<tr style="${bg}border-bottom:1px solid var(--gray-100);" data-idx="${idx}">
+            <td style="padding:8px 10px;text-align:center;">
+                <input type="checkbox" class="uic-pick-cb" data-idx="${idx}"
+                    onchange="_uicUpdateSelCount()"
+                    style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer;">
+            </td>
+            <td style="padding:8px 10px;white-space:nowrap;">${date}</td>
+            <td style="padding:8px 10px;">${e.agent || '-'}</td>
+            <td style="padding:8px 10px;font-weight:500;">${e.customerName || '-'}</td>
+            <td style="padding:8px 10px;">${e.company || '-'}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--gray-500);">${e.lineOfBusiness || '-'}</td>
+            <td style="padding:8px 10px;font-size:12px;">${e.policyType || '-'}</td>
+            <td style="padding:8px 10px;text-align:right;">$${premium.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--gray-500);">${e.policyNumber || '-'}</td>
+            <td style="padding:8px 10px;text-align:right;">${commCell}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('uicPickerSelCount').textContent = '0 entries selected';
+}
+
+function _uicUpdateSelCount() {
+    const count = document.querySelectorAll('.uic-pick-cb:checked').length;
+    document.getElementById('uicPickerSelCount').textContent =
+        count === 0 ? '0 entries selected' : `${count} entr${count === 1 ? 'y' : 'ies'} selected`;
+}
+
+function toggleUICSelectAll(checked) {
+    document.querySelectorAll('.uic-pick-cb').forEach(cb => { cb.checked = checked; });
+    _uicUpdateSelCount();
+}
+
+function addSelectedUICEntries() {
+    const checked = [...document.querySelectorAll('.uic-pick-cb:checked')];
+    if (!checked.length) { alert('Please select at least one entry.'); return; }
+
+    let commData = JSON.parse(localStorage.getItem('commissionData')) || {};
+    let added = 0, skipped = 0;
+
+    checked.forEach(cb => {
+        const idx  = parseInt(cb.dataset.idx, 10);
+        const e    = _uicPickerEntries[idx];
+        if (!e) return;
+
+        const premium     = parseFloat(e.basePremium) || 0;
+        const carrier     = e.company;
+        const lob         = e.lineOfBusiness;
+        const paymentType = e.paymentType || 'Monthly Paid';
+        const policyType  = e.policyType  || 'New';
+        const agent       = e.agent;
+        const month       = e.entryDate
+            ? new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+            : getMonthYear();
+
+        if (!agent || !carrier || premium <= 0) { skipped++; return; }
+
+        const rate = getCommissionRate(carrier, lob, paymentType, policyType);
+        if (rate <= 0) { skipped++; return; }
+
+        const commission  = calculateCommission(premium, rate);
+        const carrierType = paymentType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
+
+        if (!commData[agent])                         commData[agent] = { monthlyPaidCommissionCarriers: {}, grossPaidCarriers: {} };
+        if (!commData[agent][carrierType])            commData[agent][carrierType] = {};
+        if (!commData[agent][carrierType][carrier])   commData[agent][carrierType][carrier] = {};
+
+        const existing = commData[agent][carrierType][carrier][month];
+        if (existing) {
+            existing.amount  = parseFloat((existing.amount  + commission).toFixed(2));
+            existing.premium = parseFloat((existing.premium + premium).toFixed(2));
+            if (existing.lob && existing.lob !== lob && !existing.lob.includes(lob))
+                existing.lob = existing.lob + ', ' + lob;
+        } else {
+            commData[agent][carrierType][carrier][month] = { amount: commission, lob, rate, premium };
+        }
+        added++;
+    });
+
+    localStorage.setItem('commissionData', JSON.stringify(commData));
+    commissionData = commData;
+
+    closeUICEntryPicker();
+    loadUniversalInsCommissions();
+
+    const msg = added > 0
+        ? `✅ Added ${added} entr${added === 1 ? 'y' : 'ies'} to commissions.` + (skipped > 0 ? ` (${skipped} skipped — no rate rule found)` : '')
+        : `⚠️ No entries added — no commission rate rule found for the selected policies.`;
+    alert(msg);
+}
+
 // Agent Commission Functions
 function showAgentCommissions() {
     document.getElementById('agentCommissionModal').classList.add('active');
