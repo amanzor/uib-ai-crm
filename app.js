@@ -3058,100 +3058,89 @@ function importSelectedSheet() {
     loadCommissionStatementsList();
 }
 
-// ── Sheet Parser ──────────────────────────────────────────────
+// ── Sheet Parser (April 26 format) ────────────────────────────
+// Confirmed column map from April 26 sheet:
+//  col[0]  = Carrier section header ('Progressive','Infinity','United','National G','Ocean','Amwins')
+//  col[1]  = Client Name
+//  col[2]  = Status   (Active / Renewed / null)
+//  col[3]  = Transaction (New / Renewal / End / Canc)
+//  col[4]  = Line of Business
+//  col[5]  = Carrier full name — null on End/Canc rows, inherit currentCarrier
+//  col[6]  = Down Payment
+//  col[8]  = Payment Type
+//  col[9]  = Base Premium (null on renewal rows → fall back to col[10])
+//  col[10] = Written Premium
+//  col[11] = Term (6 or 12)
+//  col[13] = Policy Number
+//  col[14] = Commission Rate (0.10, 0.12, 0.14…)
+//  col[15] = Commission Amount  ← key field
+//  col[16] = Subtotal label on summary rows ('New', 'Ren/Adj') → skip those rows
 function csParseSheetRows(rows) {
-    const entries = [];
-    let currentCarrier = '';
+    const entries       = [];
     const carrierTotals = {};
+    let currentCarrier  = '';
 
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length === 0) continue;
+    for (const row of rows) {
+        if (!row || row.length < 16) continue;
 
-        const c0 = row[0], c1 = row[1];
-
-        // Carrier section header: col0 is a non-empty string, col1 is null or 'Client Name'
-        if (c0 && typeof c0 === 'string' && c0.trim() &&
-            (!c1 || typeof c1 !== 'string' || c1.trim().toLowerCase() === 'client name')) {
-            // Only update carrier if col1 is truly empty or a header label
-            if (!c1 || c1.toString().trim().toLowerCase() === 'client name') {
-                currentCarrier = c0.trim();
-            }
-            if (!c1 || c1.toString().trim().toLowerCase() === 'client name') continue;
+        // ── Carrier section header ──────────────────────────────
+        // col[0] non-empty string AND col[1] is null OR 'Client Name'
+        if (row[0] && typeof row[0] === 'string' && row[0].trim() &&
+            (!row[1] || row[1].toString().trim().toLowerCase() === 'client name')) {
+            currentCarrier = row[0].trim();
+            continue;
         }
 
-        // Must have a client name in col1
-        if (!c1 || typeof c1 !== 'string' || !c1.trim()) continue;
-        const clientName = c1.trim();
-        if (clientName.toLowerCase() === 'client name') continue;
+        // ── Must have a client name in col[1] ────────────────────
+        if (!row[1] || typeof row[1] !== 'string') continue;
+        const clientName = row[1].trim();
+        if (!clientName || clientName.toLowerCase() === 'client name') continue;
 
-        // Detect format:
-        //  New (Jan25+):  col[5]=carrier, col[3]=txn, col[4]=LOB, col[8]=payType,
-        //                 col[9]=base, col[10]=written, col[11]=term, col[13]=policy#,
-        //                 col[14]=rate, col[15]=commission
-        //  Old (2023):    col[6]=carrier, col[4]=txn, col[7]=downPay, col[9]=payType,
-        //                 col[10]=base, col[11]=written, col[12]=term, col[14]=policy#,
-        //                 col[15]=rate, col[16]=commission
-        const isNew = typeof row[5] === 'string' && row[5].trim().length > 0;
+        // ── Skip subtotal / summary rows (col[16] is a string) ──
+        if (row[16] && typeof row[16] === 'string') continue;
 
-        let commission, rate, carrier, transaction, lob, status, paymentType,
-            basePremium, writtenPremium, term, policyNumber, downPayment;
+        // ── Commission must be a number in col[15] ───────────────
+        if (typeof row[15] !== 'number') continue;
 
-        if (isNew) {
-            commission    = typeof row[15] === 'number' ? row[15] : null;
-            rate          = typeof row[14] === 'number' ? row[14] : 0;
-            carrier       = row[5].trim();
-            transaction   = row[3] ? row[3].toString().trim() : '';
-            lob           = row[4] ? row[4].toString().trim() : '';
-            status        = row[2] ? row[2].toString().trim() : '';
-            paymentType   = typeof row[8] === 'string' ? row[8] : '';
-            basePremium   = typeof row[9]  === 'number' ? row[9]  : 0;
-            writtenPremium= typeof row[10] === 'number' ? row[10] : basePremium;
-            term          = typeof row[11] === 'number' ? row[11] : '';
-            policyNumber  = row[13] != null ? row[13].toString().trim() : '';
-            downPayment   = typeof row[6]  === 'number' ? row[6]  : 0;
-        } else {
-            // Old format — commission could be in col[16] or, for some rows, col[15]
-            const comm16  = typeof row[16] === 'number' ? row[16] : null;
-            const comm15  = typeof row[15] === 'number' ? row[15] : null;
-            commission    = comm16 !== null ? comm16 : comm15;
-            rate          = comm16 !== null ? (typeof row[15] === 'number' ? row[15] : 0)
-                                            : (typeof row[14] === 'number' ? row[14] : 0);
-            carrier       = (typeof row[6] === 'string' && row[6].trim()) ? row[6].trim() : currentCarrier;
-            transaction   = row[4] ? row[4].toString().trim() : '';
-            lob           = '';
-            status        = row[2] ? row[2].toString().trim() : '';
-            paymentType   = typeof row[9]  === 'string' ? row[9]  : '';
-            basePremium   = typeof row[10] === 'number' ? row[10] : 0;
-            writtenPremium= typeof row[11] === 'number' ? row[11] : basePremium;
-            term          = typeof row[12] === 'number' ? row[12] : '';
-            policyNumber  = row[14] != null ? row[14].toString().trim() : '';
-            downPayment   = typeof row[7]  === 'number' ? row[7]  : 0;
+        // ── Resolve carrier ──────────────────────────────────────
+        // If col[5] has a full name (most rows) use it AND update
+        // currentCarrier so End/Canc rows that follow inherit it.
+        if (row[5] && typeof row[5] === 'string' && row[5].trim()) {
+            currentCarrier = row[5].trim();
         }
 
-        if (commission === null) continue;
+        // ── Normalize carrier abbreviations ──────────────────────
+        const CARRIER_NORMALIZE = {
+            'national g':       'National General',
+            'national ge':      'National General',
+            'national gen':     'National General',
+            'natl general':     'National General',
+            'natl gen':         'National General',
+        };
+        const _cn = (CARRIER_NORMALIZE[currentCarrier.toLowerCase()] || currentCarrier);
+        currentCarrier = _cn;
+        const carrier = currentCarrier;
 
         const entry = {
             clientName,
-            status,
-            transaction,
-            lob,
-            carrier: carrier || currentCarrier || 'Unknown',
-            downPayment,
-            paymentType,
-            basePremium,
-            writtenPremium,
-            term,
-            policyNumber,
-            rate,
-            commission,
-            agentMatch: null
+            status:         row[2]  ? row[2].toString().trim()  : '',
+            transaction:    row[3]  ? row[3].toString().trim()  : '',
+            lob:            row[4]  ? row[4].toString().trim()  : '',
+            carrier,
+            downPayment:    typeof row[6]  === 'number' ? row[6]  : 0,
+            paymentType:    row[8]  ? row[8].toString().trim()  : '',
+            basePremium:    typeof row[9]  === 'number' ? row[9]  : (typeof row[10] === 'number' ? row[10] : 0),
+            writtenPremium: typeof row[10] === 'number' ? row[10] : 0,
+            term:           typeof row[11] === 'number' ? row[11] : '',
+            policyNumber:   row[13] != null ? row[13].toString().trim() : '',
+            rate:           typeof row[14] === 'number' ? row[14] : 0,
+            commission:     row[15],
+            agentMatch:     null
         };
 
         entries.push(entry);
-        const ck = entry.carrier;
-        if (!carrierTotals[ck]) carrierTotals[ck] = 0;
-        carrierTotals[ck] += commission;
+        if (!carrierTotals[carrier]) carrierTotals[carrier] = 0;
+        carrierTotals[carrier] += row[15];
     }
 
     const grossTotal = entries.reduce((s, e) => s + e.commission, 0);
