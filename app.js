@@ -343,19 +343,20 @@ function submitAgentEmailLogin(e) {
 
 // ── Credential Manager (Admin) ─────────────────────────────────
 function openCredentialManager() {
-    // Close Agent Management modal first so they don't stack
+    // Close any open modals
     document.getElementById('agentManagementModal')?.classList.remove('active');
-    renderCredentialList();
-    const m = document.getElementById('credentialManagerModal');
-    m.classList.add('active');
-    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
+    document.getElementById('credentialManagerModal')?.classList.remove('active');
+    // Navigate to the credentials page section
+    showSection('credentialsSection');
+    renderCredentialListPage();
     refreshIcons();
+    if (window.UIBMotion) UIBMotion.animateSection(document.getElementById('credentialsSection'));
 }
 
 function closeCredentialManager() {
-    document.getElementById('credentialManagerModal').classList.remove('active');
-    // Re-open Agent Management so user can go back
-    showAgentManagement();
+    // Legacy — now just goes back to admin
+    showSection('adminSection');
+    refreshIcons();
 }
 
 function renderCredentialList() {
@@ -385,6 +386,62 @@ function renderCredentialList() {
         </div>`;
     }).join('');
     refreshIcons();
+}
+
+function renderCredentialListPage() {
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    const container   = document.getElementById('credentialListPage');
+    if (!container) return;
+
+    container.innerHTML = AGENTS.map(agent => {
+        const cred = credentials[agent] || { email: '', password: '' };
+        return `
+        <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px;">
+            <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:14px;"><i data-lucide="user"></i> ${agent}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div>
+                    <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Email (username)</label>
+                    <input type="email" id="page_cred_email_${agent.replace(/\s+/g,'_')}"
+                        value="${cred.email || ''}" placeholder="agent@email.com"
+                        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Password</label>
+                    <input type="text" id="page_cred_pass_${agent.replace(/\s+/g,'_')}"
+                        value="${cred.password || ''}" placeholder="Enter password"
+                        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                </div>
+            </div>
+            <button class="btn-primary btn-sm" onclick="saveAgentCredentialPage('${agent}')"><i data-lucide="save"></i> Save</button>
+        </div>`;
+    }).join('');
+    refreshIcons();
+}
+
+function saveAgentCredentialPage(agent) {
+    const key   = agent.replace(/\s+/g, '_');
+    const email = document.getElementById(`page_cred_email_${key}`)?.value.trim() || '';
+    const pass  = document.getElementById(`page_cred_pass_${key}`)?.value.trim() || '';
+
+    if (!email || !pass) {
+        alert('Please enter both email and password.');
+        return;
+    }
+
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    credentials[agent] = { email, password: pass };
+    localStorage.setItem('agentCredentials', JSON.stringify(credentials));
+    driveSet('agentCredentials', credentials);
+
+    // Visual feedback — change button briefly
+    const btn = document.querySelector(`#credentialsSection button[onclick="saveAgentCredentialPage('${agent}')"]`);
+    if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="check"></i> Saved!';
+        btn.disabled = true;
+        refreshIcons();
+        setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; refreshIcons(); }, 1800);
+    }
 }
 
 function saveAgentCredential(agent) {

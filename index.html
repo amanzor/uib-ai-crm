@@ -1290,6 +1290,20 @@
                 </div>
             </div>
 
+            <!-- Credentials Page -->
+            <div id="credentialsSection" class="section">
+                <div class="user-info" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn-secondary btn-sm" onclick="showSection('adminSection'); refreshIcons();"><i data-lucide="arrow-left"></i> Back to Admin</button>
+                        <strong><i data-lucide="key"></i> Manage Login Credentials</strong>
+                    </div>
+                </div>
+                <div style="max-width:680px; margin:24px auto 0;">
+                    <p style="font-size:13px; color:var(--gray-500); margin-bottom:20px;">Set the email address and password each agent uses to log in via the Agent Login button.</p>
+                    <div id="credentialListPage"></div>
+                </div>
+            </div>
+
             <!-- Admin Dashboard -->
             <div id="adminSection" class="section">
                 <div class="user-info">
