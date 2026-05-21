@@ -299,9 +299,13 @@ function initializeCredentials() {
 
 // ── Agent Email Login ──────────────────────────────────────────
 function openAgentEmailLogin() {
-    document.getElementById('agentLoginEmail').value = '';
+    // Restore saved username if remembered
+    const saved = localStorage.getItem('rememberedAgentEmail') || '';
+    document.getElementById('agentLoginEmail').value = saved;
     document.getElementById('agentLoginPassword').value = '';
     document.getElementById('agentLoginError').style.display = 'none';
+    const rememberBox = document.getElementById('rememberAgentEmail');
+    if (rememberBox) rememberBox.checked = !!saved;
     const m = document.getElementById('agentEmailLoginModal');
     m.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(m);
@@ -332,6 +336,15 @@ function submitAgentEmailLogin(e) {
 
     const agentName = match[0];
     errEl.style.display = 'none';
+
+    // Save or clear remembered username
+    const remember = document.getElementById('rememberAgentEmail')?.checked;
+    if (remember) {
+        localStorage.setItem('rememberedAgentEmail', email);
+    } else {
+        localStorage.removeItem('rememberedAgentEmail');
+    }
+
     closeAgentEmailLogin();
     showAgentSection(agentName);
     loadFromSheet().then(() => {
