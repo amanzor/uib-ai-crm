@@ -550,13 +550,6 @@
                     <h2><i data-lucide="book-open"></i> UIB Binder Book</h2>
                     <p class="login-subtitle">Select your account to continue</p>
 
-                    <!-- Manage Credentials -->
-                    <div style="margin-bottom:18px;">
-                        <button class="btn-secondary" style="width:100%;max-width:320px;padding:13px 20px;font-size:15px;border-radius:var(--radius-md);" onclick="openCredentialManager()">
-                            <i data-lucide="key"></i> Manage Login Credentials
-                        </button>
-                    </div>
-
                     <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">— select your profile below —</p>
                     <div class="agent-list" id="agentList"></div>
                     <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; max-width:720px; margin-left:auto; margin-right:auto; align-items:stretch;">
@@ -1369,7 +1362,7 @@
                     <button class="btn-primary" onclick="showCommissionDashboard()"><i data-lucide="trending-up"></i> Commissions</button>
                     <button class="btn-primary" onclick="showCarrierManagement()"><i data-lucide="building-2"></i> Carriers</button>
                     <button class="btn-primary" onclick="showAgentManagement()"><i data-lucide="users"></i> Agents</button>
-                    <button class="btn-primary" onclick="showPasswordManagement()"><i data-lucide="key"></i> Passwords</button>
+                    <button class="btn-primary" onclick="openCredentialManager()"><i data-lucide="key"></i> Credentials</button>
                     <button class="btn-danger" onclick="logout()"><i data-lucide="log-out"></i> Logout</button>
                 </div>
             </div>
