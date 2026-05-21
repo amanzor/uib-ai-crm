@@ -414,54 +414,55 @@ function renderCredentialListPage() {
     const container   = document.getElementById('credentialListPage');
     if (!container) return;
 
-    container.innerHTML = AGENTS.map(agent => {
+    // Get all agents — include extras added via "Add Agent Credential"
+    const allAgents = Array.from(new Set([...AGENTS, ...Object.keys(credentials)]));
+
+    container.innerHTML = allAgents.map(agent => {
         const cred = credentials[agent] || { email: '', password: '' };
+        const key  = agent.replace(/\s+/g, '_');
         return `
         <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px;">
-            <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:14px;"><i data-lucide="user"></i> ${agent}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-weight:700;color:var(--navy);font-size:14px;"><i data-lucide="user"></i> ${agent}</span>
+                <span id="cred_status_${key}" style="font-size:12px;color:var(--success);font-weight:600;opacity:0;transition:opacity .3s;">✓ Saved</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div>
                     <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Email (username)</label>
-                    <input type="email" id="page_cred_email_${agent.replace(/\s+/g,'_')}"
+                    <input type="email" id="page_cred_email_${key}"
                         value="${cred.email || ''}" placeholder="agent@email.com"
+                        onchange="autoSaveCredential('${agent}')"
                         style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                 </div>
                 <div>
                     <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Password</label>
-                    <input type="text" id="page_cred_pass_${agent.replace(/\s+/g,'_')}"
+                    <input type="text" id="page_cred_pass_${key}"
                         value="${cred.password || ''}" placeholder="Enter password"
+                        onchange="autoSaveCredential('${agent}')"
                         style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                 </div>
             </div>
-            <button class="btn-primary btn-sm" onclick="saveAgentCredentialPage('${agent}')"><i data-lucide="save"></i> Save</button>
         </div>`;
     }).join('');
     refreshIcons();
 }
 
-function saveAgentCredentialPage(agent) {
+function autoSaveCredential(agent) {
     const key   = agent.replace(/\s+/g, '_');
     const email = document.getElementById(`page_cred_email_${key}`)?.value.trim() || '';
     const pass  = document.getElementById(`page_cred_pass_${key}`)?.value.trim() || '';
-
-    if (!email || !pass) {
-        alert('Please enter both email and password.');
-        return;
-    }
 
     const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
     credentials[agent] = { email, password: pass };
     localStorage.setItem('agentCredentials', JSON.stringify(credentials));
     driveSet('agentCredentials', credentials);
 
-    // Visual feedback — change button briefly
-    const btn = document.querySelector(`#credentialsSection button[onclick="saveAgentCredentialPage('${agent}')"]`);
-    if (btn) {
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i data-lucide="check"></i> Saved!';
-        btn.disabled = true;
-        refreshIcons();
-        setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; refreshIcons(); }, 1800);
+    // Flash the ✓ Saved indicator
+    const status = document.getElementById(`cred_status_${key}`);
+    if (status) {
+        status.style.opacity = '1';
+        clearTimeout(status._hideTimer);
+        status._hideTimer = setTimeout(() => { status.style.opacity = '0'; }, 2000);
     }
 }
 
