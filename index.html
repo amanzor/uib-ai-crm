@@ -442,10 +442,10 @@
             background: rgba(15,23,42,.55);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
-            z-index: 1000;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            padding: 20px;
+            padding: 24px 16px;
+            overflow-y: auto;
         }
         .modal.active { display:flex; animation:modalIn .2s ease; }
         @keyframes modalIn { from{opacity:0;transform:scale(.97)} to{opacity:1;transform:scale(1)} }
@@ -458,6 +458,7 @@
             width: 100%;
             box-shadow: var(--shadow-xl);
             border: 1px solid var(--gray-200);
+            margin: auto;
         }
         .modal-content h3 { color:var(--navy); margin-bottom:18px; font-size:1.1rem; font-weight:700; }
         .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; }
@@ -1254,9 +1255,8 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn-success">Save Policy Entry</button>
-                            <button type="reset" class="btn-primary">Clear Form</button>
+                        <div class="form-actions" style="justify-content:center;">
+                            <button type="submit" class="btn-success" style="padding:12px 40px;font-size:15px;">💾 Save Policy Entry</button>
                         </div>
                     </form>
                     </div><!-- end modal-content -->
