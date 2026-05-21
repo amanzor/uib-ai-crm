@@ -572,12 +572,16 @@
             <div id="loginSection" class="section active">
                 <div class="login-container">
                     <h2><i data-lucide="book-open"></i> UIB Binder Book</h2>
-                    <p class="login-subtitle">Select your profile to sign in</p>
+                    <p class="login-subtitle">Sign in to continue</p>
 
-                    <!-- Agent Cards -->
-                    <div class="agent-list" id="agentList"></div>
+                    <!-- Agent Login Button -->
+                    <div style="margin-bottom:24px;">
+                        <button class="btn-primary" style="width:100%;max-width:320px;padding:13px 20px;font-size:15px;border-radius:var(--radius-md);" onclick="openAgentEmailLogin()">
+                            <i data-lucide="log-in"></i> Agent Login
+                        </button>
+                    </div>
 
-                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; max-width:720px; margin-left:auto; margin-right:auto; align-items:stretch;">
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:0; max-width:720px; margin-left:auto; margin-right:auto; align-items:stretch;">
                         <button class="btn-success login-action-btn" onclick="openNewProspectModal()"><i data-lucide="user-plus"></i> New Prospect</button>
                         <button class="btn-purple login-action-btn" onclick="openDailyVerificationModal()"><i data-lucide="file-check"></i> Daily Verification Log</button>
                         <button class="btn-primary login-action-btn" onclick="showAdminLogin()" style="grid-row:span 2;"><i data-lucide="lock"></i> Admin Login</button>
