@@ -1809,6 +1809,12 @@ function loadCommissionData() {
     return commissionData;
 }
 
+// Default 10 % catch-all rules applied to every carrier with no rules
+const DEFAULT_COMMISSION_RULES = [
+    { lineOfBusiness: ALL_LOBS, paymentType: 'Monthly Paid', newRate: 10, renewRate: 10 },
+    { lineOfBusiness: ALL_LOBS, paymentType: 'Gross Paid',   newRate: 10, renewRate: 10 }
+];
+
 function initializeCarrierData() {
     const defaultCarriers = [
         "AIG", "Admiral", "AmWins", "American Tradition", "Ascendant", "Atunne", "Avatar",
@@ -1826,24 +1832,32 @@ function initializeCarrierData() {
     let carrierData = stored ? JSON.parse(stored) : {};
 
     let updated = false;
+
+    // Seed any missing default carriers
     defaultCarriers.forEach(name => {
         if (!carrierData[name]) {
             carrierData[name] = {
-                carrierName: name,
-                phoneNumbers: ["", "", ""],
-                emails: { underwriting: "", general: "", miscellaneous: "" },
-                commissionRules: []
+                carrierName:   name,
+                phoneNumbers:  ["", "", ""],
+                emails:        { underwriting: "", general: "", miscellaneous: "" },
+                commissionRules: JSON.parse(JSON.stringify(DEFAULT_COMMISSION_RULES))
             };
             updated = true;
         }
     });
 
+    // Migration: fill 10 % default rules into any carrier that still has none
+    Object.keys(carrierData).forEach(name => {
+        if (!carrierData[name].commissionRules || carrierData[name].commissionRules.length === 0) {
+            carrierData[name].commissionRules = JSON.parse(JSON.stringify(DEFAULT_COMMISSION_RULES));
+            updated = true;
+        }
+    });
+
+    carrierMasterData = carrierData;
     if (!stored || updated) {
-        carrierMasterData = carrierData;
         _origSetItem('carrierMasterData', JSON.stringify(carrierData));
         driveSet('carrierMasterData', carrierData);
-    } else {
-        carrierMasterData = carrierData;
     }
 }
 
