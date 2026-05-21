@@ -1100,7 +1100,10 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Insurance Company *</label>
+                                <label style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span>Insurance Company *</span>
+                                    <button type="button" class="btn-success btn-sm" onclick="openAddCarrierModal()" style="padding:3px 10px;font-size:12px;"><i data-lucide="plus-circle"></i> Add Carrier</button>
+                                </label>
                                 <select id="company" required>
                                     <option value="">Select Company</option>
                                     <option value="AIG">AIG</option>
