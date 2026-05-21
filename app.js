@@ -319,25 +319,36 @@ function closeAgentEmailLogin() {
 function submitAgentEmailLogin(e) {
     e.preventDefault();
     const input    = document.getElementById('agentLoginEmail').value.trim().toLowerCase();
-    const password = document.getElementById('agentLoginPassword').value;
+    const password = document.getElementById('agentLoginPassword').value.trim();
     const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
     const errEl = document.getElementById('agentLoginError');
 
-    // Match by email (if set) OR by agent name (case-insensitive)
+    // Helper: get the stored password regardless of format (old flat string or new object)
+    function getStoredPassword(cred) {
+        if (typeof cred === 'string') return cred;           // old format
+        if (typeof cred === 'object') return cred.password || ''; // new format
+        return '';
+    }
+    function getStoredEmail(cred) {
+        if (typeof cred === 'object') return (cred.email || '').toLowerCase();
+        return '';
+    }
+
+    // Match by: email, OR full agent name, OR first name only
     const match = Object.entries(credentials).find(([name, cred]) => {
-        const emailMatch = cred.email && cred.email.toLowerCase() === input;
-        const nameMatch  = name.toLowerCase() === input;
-        return (emailMatch || nameMatch) && cred.password === password;
+        const storedPass  = getStoredPassword(cred);
+        const storedEmail = getStoredEmail(cred);
+        const firstName   = name.split(' ')[0].toLowerCase();
+
+        const byEmail     = storedEmail && storedEmail === input;
+        const byFullName  = name.toLowerCase() === input;
+        const byFirstName = firstName === input;
+
+        return (byEmail || byFullName || byFirstName) && storedPass === password;
     });
 
     if (!match) {
-        // Give a helpful message if no credentials are configured at all
-        const hasAnyEmail = Object.values(credentials).some(c => c.email);
-        if (!hasAnyEmail) {
-            errEl.textContent = 'No credentials set up yet. Enter your agent name (e.g. "alberto manzor") and default password (e.g. "alberto").';
-        } else {
-            errEl.textContent = 'Invalid username or password. Try your email or full name.';
-        }
+        errEl.textContent = 'Incorrect username or password. Try your full name (e.g. "Alberto Manzor") and your password.';
         errEl.style.display = 'block';
         return;
     }
@@ -345,7 +356,6 @@ function submitAgentEmailLogin(e) {
     const agentName = match[0];
     errEl.style.display = 'none';
 
-    // Save or clear remembered username
     const remember = document.getElementById('rememberAgentEmail')?.checked;
     if (remember) {
         localStorage.setItem('rememberedAgentEmail', input);
