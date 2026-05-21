@@ -299,57 +299,14 @@ function initializeCredentials() {
 
 // ── Agent Email Login ──────────────────────────────────────────
 function openAgentEmailLogin() {
-    showAgentPicker();
+    document.getElementById('agentLoginEmail').value = '';
+    document.getElementById('agentLoginPassword').value = '';
+    document.getElementById('agentLoginError').style.display = 'none';
     const m = document.getElementById('agentEmailLoginModal');
     m.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(m);
     refreshIcons();
-}
-
-function showAgentPicker() {
-    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
-    // Show all agents that have a password set
-    const agentNames = Array.from(new Set([...AGENTS, ...Object.keys(credentials)]));
-
-    const list = document.getElementById('agentPickerList');
-    list.innerHTML = agentNames.map(name => {
-        const cred = credentials[name] || {};
-        const hasPass = typeof cred === 'string' ? !!cred : !!(cred.password);
-        if (!hasPass) return '';
-        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        return `
-        <button type="button" onclick="selectAgentForLogin('${name}')"
-            style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--gray-50);
-                   border:1.5px solid var(--gray-200);border-radius:var(--radius-md);cursor:pointer;
-                   font-size:14px;font-weight:600;color:var(--navy);transition:all .15s;text-align:left;width:100%;"
-            onmouseover="this.style.background='var(--blue-pale)';this.style.borderColor='var(--blue-light)'"
-            onmouseout="this.style.background='var(--gray-50)';this.style.borderColor='var(--gray-200)'">
-            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--navy));
-                        color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">
-                ${initials}
-            </div>
-            <span>${name}</span>
-        </button>`;
-    }).join('');
-
-    document.getElementById('agentPickerStep').style.display = 'block';
-    document.getElementById('agentPasswordStep').style.display = 'none';
-    document.getElementById('agentLoginTitle').innerHTML = '<i data-lucide="log-in"></i> Agent Login';
-    refreshIcons();
-}
-
-function selectAgentForLogin(agentName) {
-    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
-    const cred = credentials[agentName] || {};
-    // Store the agent name as the login key
-    document.getElementById('agentLoginEmail').value = agentName;
-    document.getElementById('agentLoginPassword').value = '';
-    document.getElementById('agentLoginError').style.display = 'none';
-    document.getElementById('agentPickerStep').style.display = 'none';
-    document.getElementById('agentPasswordStep').style.display = 'block';
-    document.getElementById('agentLoginTitle').innerHTML = `<i data-lucide="log-in"></i> Sign in as ${agentName.split(' ')[0]}`;
-    refreshIcons();
-    setTimeout(() => document.getElementById('agentLoginPassword').focus(), 80);
+    setTimeout(() => document.getElementById('agentLoginEmail').focus(), 80);
 }
 
 function closeAgentEmailLogin() {
