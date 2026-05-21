@@ -530,7 +530,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeCommissionData();
     initializeCarrierData();
     initializeAgentData();
-    initializeAgentButtons();
     setTodayDate();
 
     ['agencyFee', 'agencyCommission'].forEach(id => {
@@ -555,7 +554,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Sync from Drive in background — won't block the UI
     syncFromDrive().then(() => {
-        initializeAgentButtons(); // Refresh agent buttons after sync
         refreshIcons();
     });
 
