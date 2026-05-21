@@ -1297,10 +1297,42 @@
                         <button class="btn-secondary btn-sm" onclick="showSection('adminSection'); refreshIcons();"><i data-lucide="arrow-left"></i> Back to Admin</button>
                         <strong><i data-lucide="key"></i> Manage Login Credentials</strong>
                     </div>
+                    <button class="btn-success btn-sm" onclick="openAddCredentialModal()"><i data-lucide="user-plus"></i> Add Agent Credential</button>
                 </div>
                 <div style="max-width:680px; margin:24px auto 0;">
                     <p style="font-size:13px; color:var(--gray-500); margin-bottom:20px;">Set the email address and password each agent uses to log in via the Agent Login button.</p>
                     <div id="credentialListPage"></div>
+                </div>
+            </div>
+
+            <!-- Add Agent Credential Modal -->
+            <div id="addCredentialModal" class="modal">
+                <div class="modal-content" style="max-width:420px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h3 style="margin:0;"><i data-lucide="user-plus"></i> Add Agent Credential</h3>
+                        <button class="btn-danger btn-sm" onclick="closeAddCredentialModal()">✕ Close</button>
+                    </div>
+                    <form onsubmit="submitAddCredential(event)">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label>Agent Name</label>
+                            <input type="text" id="newCredAgent" placeholder="Full name" required
+                                style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label>Email Address</label>
+                            <input type="email" id="newCredEmail" placeholder="agent@email.com" required
+                                style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:20px;">
+                            <label>Password</label>
+                            <input type="text" id="newCredPassword" placeholder="Enter password" required
+                                style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;">
+                        </div>
+                        <div style="display:flex;gap:10px;">
+                            <button type="submit" class="btn-success" style="flex:1;padding:11px;"><i data-lucide="save"></i> Save</button>
+                            <button type="button" class="btn-secondary" style="flex:1;padding:11px;" onclick="closeAddCredentialModal()">Cancel</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 

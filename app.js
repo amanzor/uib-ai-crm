@@ -444,6 +444,41 @@ function saveAgentCredentialPage(agent) {
     }
 }
 
+function openAddCredentialModal() {
+    const m = document.getElementById('addCredentialModal');
+    m.classList.add('active');
+    document.getElementById('newCredAgent').value = '';
+    document.getElementById('newCredEmail').value = '';
+    document.getElementById('newCredPassword').value = '';
+    if (window.UIBMotion) UIBMotion.animateModalOpen(m);
+    refreshIcons();
+}
+
+function closeAddCredentialModal() {
+    document.getElementById('addCredentialModal').classList.remove('active');
+}
+
+function submitAddCredential(e) {
+    e.preventDefault();
+    const agent = document.getElementById('newCredAgent').value.trim();
+    const email = document.getElementById('newCredEmail').value.trim();
+    const pass  = document.getElementById('newCredPassword').value.trim();
+
+    if (!agent || !email || !pass) {
+        alert('Please fill in all fields.');
+        return;
+    }
+
+    const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
+    credentials[agent] = { email, password: pass };
+    localStorage.setItem('agentCredentials', JSON.stringify(credentials));
+    driveSet('agentCredentials', credentials);
+
+    closeAddCredentialModal();
+    renderCredentialListPage();
+    refreshIcons();
+}
+
 function saveAgentCredential(agent) {
     const key   = agent.replace(/\s+/g, '_');
     const email = document.getElementById(`cred_email_${key}`)?.value.trim() || '';
