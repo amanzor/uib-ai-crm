@@ -3008,7 +3008,8 @@ function openUICEntryPicker() {
     refreshAllCarrierDropdowns();
 
     // Reset manual form
-    ['uicManualClientName','uicManualDownPmt','uicManualAgencyFee','uicManualBasePrem','uicManualWrittenPrem','uicManualPolicyNum','uicManualRate','uicManualCommission']
+    ['uicManualAgentName','uicManualCSRName','uicManualDealerLocation',
+     'uicManualClientName','uicManualDownPmt','uicManualAgencyFee','uicManualBasePrem','uicManualWrittenPrem','uicManualPolicyNum','uicManualRate','uicManualCommission']
         .forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.value = ''; if (el.dataset) el.dataset.manualOverride = ''; }
@@ -3113,12 +3114,15 @@ function uicManualCalcFromRate() {
 }
 
 function uicSaveManualEntry() {
-    const agent       = document.getElementById('uicManualAgent')?.value        || '';
-    const clientName  = document.getElementById('uicManualClientName')?.value.trim() || '';
-    const carrier     = document.getElementById('uicManualCarrier')?.value      || '';
-    const lob         = document.getElementById('uicManualLOB')?.value          || '';
-    const commType    = document.getElementById('uicManualCommType')?.value     || '';  // Monthly Paid / Gross Paid
-    const paymentType = document.getElementById('uicManualPaymentType')?.value  || '';  // EFT / Recurring / Direct
+    const agent          = document.getElementById('uicManualAgent')?.value           || '';
+    const agentName      = document.getElementById('uicManualAgentName')?.value.trim()  || '';
+    const csrName        = document.getElementById('uicManualCSRName')?.value.trim()    || '';
+    const dealerLocation = document.getElementById('uicManualDealerLocation')?.value.trim() || '';
+    const clientName     = document.getElementById('uicManualClientName')?.value.trim() || '';
+    const carrier        = document.getElementById('uicManualCarrier')?.value           || '';
+    const lob            = document.getElementById('uicManualLOB')?.value               || '';
+    const commType       = document.getElementById('uicManualCommType')?.value          || '';  // Monthly Paid / Gross Paid
+    const paymentType    = document.getElementById('uicManualPaymentType')?.value       || '';  // EFT / Recurring / Direct
     const commission  = parseFloat(document.getElementById('uicManualCommission')?.value);
     const rate        = parseFloat(document.getElementById('uicManualRate')?.value)       || 0;
     const basePrem    = parseFloat(document.getElementById('uicManualBasePrem')?.value)   || 0;
@@ -3155,7 +3159,8 @@ function uicSaveManualEntry() {
         commData[agent][carrierType][carrier][month] = {
             amount: commission, lob, rate, premium: basePrem,
             agencyFee, writtenPrem, downPmt, term, policyNum,
-            status, transaction, paymentType, clientName
+            status, transaction, paymentType, clientName,
+            agentName, csrName, dealerLocation
         };
     }
 

@@ -1602,12 +1602,33 @@
                         <p style="margin:0 0 18px;font-size:13px;color:var(--gray-500);">Fill in the fields below — Commission auto-calculates when Carrier, LOB, Payment Type and Base Premium are set.</p>
                         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
 
-                            <!-- Agent -->
+                            <!-- Agent (ledger owner) -->
                             <div class="form-group">
                                 <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Agent <span style="color:var(--danger);">*</span></label>
                                 <select id="uicManualAgent" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                                     <option value="">— Select Agent —</option>
                                 </select>
+                            </div>
+
+                            <!-- Agent Name (writing agent, free text) -->
+                            <div class="form-group">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Agent Name</label>
+                                <input id="uicManualAgentName" type="text" placeholder="Writing agent name"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
+                            </div>
+
+                            <!-- CSR Name -->
+                            <div class="form-group">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">CSR Name</label>
+                                <input id="uicManualCSRName" type="text" placeholder="Customer service rep"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
+                            </div>
+
+                            <!-- Dealer Location -->
+                            <div class="form-group">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Dealer Location</label>
+                                <input id="uicManualDealerLocation" type="text" placeholder="e.g. Doral, Miami"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
                             </div>
 
                             <!-- Client Name -->
@@ -2615,7 +2636,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260522s"></script>
-    <script src="app.js?v=20260522s"></script>
+    <script src="motion.js?v=20260522t"></script>
+    <script src="app.js?v=20260522t"></script>
 </body>
 </html>
