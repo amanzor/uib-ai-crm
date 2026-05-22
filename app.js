@@ -4079,3 +4079,393 @@ function deleteCSStatement(monthKey) {
     csCurrentMonthKey = null;
     loadCommissionStatementsList();
 }
+
+// ============================================================
+// PRODUCTION DASHBOARD
+// ============================================================
+
+let _prodPeriod = 'today';
+let _prodView   = 'table';
+let _prodSortCol = 'entryDate';
+let _prodSortDir = -1; // -1 = descending (newest first)
+
+function showProductionDashboard() {
+    const modal = document.getElementById('productionDashboardModal');
+    modal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
+
+    // Refresh allData from localStorage in case it was updated
+    allData = JSON.parse(localStorage.getItem('binderData')) || [];
+
+    // Populate Agent filter
+    const agents = [...new Set(allData.map(d => d.agent).filter(Boolean))].sort();
+    const agentSel = document.getElementById('prodAgentFilter');
+    if (agentSel) agentSel.innerHTML =
+        '<option value="">All Agents</option>' +
+        agents.map(a => `<option value="${a}">${a}</option>`).join('');
+
+    // Populate LOB filter
+    const lobs = [...new Set(allData.map(d => d.lineOfBusiness).filter(Boolean))].sort();
+    const lobSel = document.getElementById('prodLOBFilter');
+    if (lobSel) lobSel.innerHTML =
+        '<option value="">All LOBs</option>' +
+        lobs.map(l => `<option value="${l}">${l}</option>`).join('');
+
+    // Populate Location filter
+    const locs = [...new Set(allData.map(d => d.location).filter(Boolean))].sort();
+    const locSel = document.getElementById('prodLocationFilter');
+    if (locSel) locSel.innerHTML =
+        '<option value="">All Locations</option>' +
+        locs.map(l => `<option value="${l}">${l}</option>`).join('');
+
+    // Set default custom range (first of current month → today)
+    const today = getEasternDateString();
+    const firstOfMonth = today.slice(0, 7) + '-01';
+    const dateFrom = document.getElementById('prodDateFrom');
+    const dateTo   = document.getElementById('prodDateTo');
+    if (dateFrom) dateFrom.value = firstOfMonth;
+    if (dateTo)   dateTo.value   = today;
+
+    // Reset to "today" view
+    _prodPeriod  = 'today';
+    _prodView    = 'table';
+    _prodSortCol = 'entryDate';
+    _prodSortDir = -1;
+    prodSetPeriod('today');
+
+    refreshIcons();
+}
+
+function prodSetPeriod(period) {
+    _prodPeriod = period;
+    ['today','month','year','all','custom'].forEach(p => {
+        const tab = document.getElementById('prodTab_' + p);
+        if (tab) tab.className = 'prod-tab' + (p === period ? ' prod-tab-active' : '');
+    });
+    const customRange = document.getElementById('prodCustomRange');
+    if (customRange) customRange.style.display = period === 'custom' ? 'flex' : 'none';
+    prodApplyFilters();
+}
+
+function prodGetFilteredData() {
+    const today = getEasternDateString();
+    const year  = today.slice(0, 4);
+    const month = today.slice(0, 7);
+    const agentF = document.getElementById('prodAgentFilter')?.value    || '';
+    const lobF   = document.getElementById('prodLOBFilter')?.value      || '';
+    const locF   = document.getElementById('prodLocationFilter')?.value || '';
+    const dateFrom = document.getElementById('prodDateFrom')?.value || '';
+    const dateTo   = document.getElementById('prodDateTo')?.value   || '';
+
+    return allData.filter(d => {
+        const date = (d.entryDate || '').slice(0, 10);
+        if (_prodPeriod === 'today'  && date !== today)                return false;
+        if (_prodPeriod === 'month'  && !date.startsWith(month))       return false;
+        if (_prodPeriod === 'year'   && !date.startsWith(year))        return false;
+        if (_prodPeriod === 'custom') {
+            if (dateFrom && date < dateFrom) return false;
+            if (dateTo   && date > dateTo)   return false;
+        }
+        if (agentF && d.agent           !== agentF) return false;
+        if (lobF   && d.lineOfBusiness  !== lobF)   return false;
+        if (locF   && (d.location || '') !== locF)  return false;
+        return true;
+    });
+}
+
+function prodApplyFilters() {
+    const data = prodGetFilteredData();
+    prodRenderStats(data);
+
+    const sub  = document.getElementById('prodHeaderSub');
+    const label = { today:'Today', month:'This Month', year:'This Year', all:'All Time', custom:'Custom Range' }[_prodPeriod] || '';
+    if (sub) sub.textContent = `${data.length} polic${data.length === 1 ? 'y' : 'ies'} · ${label}`;
+
+    if (_prodView === 'chart') {
+        prodRenderChart(data);
+    } else {
+        prodRenderTable(data);
+    }
+}
+
+function prodRenderStats(data) {
+    const totalPrem  = data.reduce((s, d) => s + (parseFloat(d.totalPremium) || 0), 0);
+    const totalBase  = data.reduce((s, d) => s + (parseFloat(d.basePremium)  || 0), 0);
+    const avgPrem    = data.length > 0 ? totalPrem / data.length : 0;
+    const agentCount = new Set(data.map(d => d.agent).filter(Boolean)).size;
+    const carrCount  = new Set(data.map(d => d.company).filter(Boolean)).size;
+    const fmt  = v => '$' + Math.round(v).toLocaleString();
+    const fmt2 = v => '$' + v.toLocaleString(undefined, { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+    document.getElementById('prodStatsRow').innerHTML = `
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;">
+            <div style="font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Total Policies</div>
+            <div style="font-size:28px;font-weight:800;color:#0d1f3c;line-height:1;">${data.length.toLocaleString()}</div>
+            <div style="font-size:11px;color:#3b82f6;margin-top:4px;">${agentCount} agent${agentCount!==1?'s':''} · ${carrCount} carrier${carrCount!==1?'s':''}</div>
+        </div>
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 18px;">
+            <div style="font-size:10px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Total Premium</div>
+            <div style="font-size:28px;font-weight:800;color:#0d1f3c;line-height:1;">${fmt(totalPrem)}</div>
+            <div style="font-size:11px;color:#059669;margin-top:4px;">Base: ${fmt(totalBase)}</div>
+        </div>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;">
+            <div style="font-size:10px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Avg Premium</div>
+            <div style="font-size:28px;font-weight:800;color:#0d1f3c;line-height:1;">${fmt(avgPrem)}</div>
+            <div style="font-size:11px;color:#d97706;margin-top:4px;">per policy</div>
+        </div>
+        <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px 18px;">
+            <div style="font-size:10px;font-weight:700;color:#7e22ce;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;">Top Agent</div>
+            <div style="font-size:16px;font-weight:800;color:#0d1f3c;line-height:1.2;">${prodTopAgent(data)}</div>
+            <div style="font-size:11px;color:#7c3aed;margin-top:4px;">${prodTopAgentCount(data)} policies</div>
+        </div>
+    `;
+}
+
+function prodTopAgent(data) {
+    if (data.length === 0) return '—';
+    const counts = {};
+    data.forEach(d => { if (d.agent) counts[d.agent] = (counts[d.agent] || 0) + 1; });
+    return Object.entries(counts).sort((a,b) => b[1]-a[1])[0]?.[0] || '—';
+}
+function prodTopAgentCount(data) {
+    if (data.length === 0) return 0;
+    const counts = {};
+    data.forEach(d => { if (d.agent) counts[d.agent] = (counts[d.agent] || 0) + 1; });
+    return Object.entries(counts).sort((a,b) => b[1]-a[1])[0]?.[1] || 0;
+}
+
+// ── Table View ────────────────────────────────────────────────
+function prodRenderTable(data) {
+    const sorted = [...data].sort((a, b) => {
+        let va, vb;
+        if (_prodSortCol === 'totalPremium' || _prodSortCol === 'basePremium') {
+            va = parseFloat(a[_prodSortCol]) || 0;
+            vb = parseFloat(b[_prodSortCol]) || 0;
+        } else {
+            va = (a[_prodSortCol] || '').toString().toLowerCase();
+            vb = (b[_prodSortCol] || '').toString().toLowerCase();
+        }
+        if (va < vb) return -1 * _prodSortDir;
+        if (va > vb) return  1 * _prodSortDir;
+        return 0;
+    });
+
+    const th = (col, lbl, align) => {
+        const arrow = _prodSortCol === col ? (_prodSortDir === -1 ? ' ↓' : ' ↑') : ' <span style="opacity:.25">↕</span>';
+        return `<th onclick="prodSort('${col}')"
+            style="padding:10px 12px;text-align:${align||'left'};font-weight:600;color:#334155;cursor:pointer;white-space:nowrap;user-select:none;font-size:12px;">
+            ${lbl}${arrow}</th>`;
+    };
+
+    const rows = sorted.map(d => {
+        const tp   = parseFloat(d.totalPremium) || 0;
+        const date = (d.entryDate || '').slice(0,10);
+        const disp = date ? new Date(date + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+        const pnum = d.policyNumber || d.binderNumber || '—';
+        const lobBadge = d.lineOfBusiness
+            ? `<span style="background:#eff6ff;color:#1e40af;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;">${d.lineOfBusiness}</span>`
+            : '—';
+        const typeBadge = d.policyType
+            ? `<span style="background:${d.policyType==='New'?'#ecfdf5':d.policyType==='Renewal'?'#fff7ed':'#f8fafc'};color:${d.policyType==='New'?'#065f46':d.policyType==='Renewal'?'#9a3412':'#475569'};padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;">${d.policyType}</span>`
+            : '—';
+
+        return `<tr style="border-bottom:1px solid #f1f5f9;"
+            onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+            <td style="padding:9px 12px;font-size:12px;color:#64748b;white-space:nowrap;">${disp}</td>
+            <td style="padding:9px 12px;font-size:13px;font-weight:600;color:#1e40af;">${d.agent||'—'}</td>
+            <td style="padding:9px 12px;font-size:13px;">${d.customerName||'—'}</td>
+            <td style="padding:9px 12px;font-size:12px;color:#64748b;font-family:monospace;">${pnum}</td>
+            <td style="padding:9px 12px;font-size:12px;">${d.company||'—'}</td>
+            <td style="padding:9px 12px;">${lobBadge}</td>
+            <td style="padding:9px 12px;">${typeBadge}</td>
+            <td style="padding:9px 12px;font-size:12px;color:#64748b;">${d.location||'—'}</td>
+            <td style="padding:9px 12px;font-size:13px;font-weight:700;color:#059669;text-align:right;white-space:nowrap;">
+                $${tp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('prodBody').innerHTML = `
+        <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;">
+            <table style="width:100%;border-collapse:collapse;min-width:820px;">
+                <thead>
+                    <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                        ${th('entryDate','Date')}
+                        ${th('agent','Agent')}
+                        ${th('customerName','Client Name')}
+                        ${th('policyNumber','Policy #')}
+                        ${th('company','Carrier')}
+                        ${th('lineOfBusiness','LOB')}
+                        ${th('policyType','Type')}
+                        ${th('location','Location')}
+                        ${th('totalPremium','Premium','right')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows || '<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;font-size:14px;">No policies found for this period.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+        <p style="margin-top:10px;font-size:12px;color:#94a3b8;text-align:center;">
+            ${sorted.length} result${sorted.length!==1?'s':''} · Click any column header to sort
+        </p>
+    `;
+    refreshIcons();
+}
+
+function prodSort(col) {
+    if (_prodSortCol === col) {
+        _prodSortDir *= -1;
+    } else {
+        _prodSortCol = col;
+        _prodSortDir = (col === 'totalPremium' || col === 'basePremium' || col === 'entryDate') ? -1 : 1;
+    }
+    prodRenderTable(prodGetFilteredData());
+}
+
+function prodSwitchView(view) {
+    _prodView = view;
+    const tBtn = document.getElementById('prodViewTable');
+    const cBtn = document.getElementById('prodViewChart');
+    if (tBtn) tBtn.className = (view === 'table' ? 'btn-primary' : 'btn-secondary') + ' btn-sm';
+    if (cBtn) cBtn.className = (view === 'chart' ? 'btn-primary' : 'btn-secondary') + ' btn-sm';
+    prodApplyFilters();
+}
+
+// ── Chart View ────────────────────────────────────────────────
+function prodRenderChart(data) {
+    const body     = document.getElementById('prodBody');
+    const groupBy  = document.getElementById('prodChartGroupBy')?.value  || 'agent';
+    const metric   = document.getElementById('prodChartMetric')?.value   || 'premium';
+
+    // Build grouped data
+    const groups = {};
+    data.forEach(d => {
+        let key;
+        switch (groupBy) {
+            case 'agent':      key = d.agent           || 'Unknown'; break;
+            case 'carrier':    key = d.company          || 'Unknown'; break;
+            case 'lob':        key = d.lineOfBusiness   || 'Unknown'; break;
+            case 'location':   key = d.location         || 'No Location'; break;
+            case 'policyType': key = d.policyType       || 'Unknown'; break;
+            case 'day':
+                key = d.entryDate
+                    ? new Date(d.entryDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+                    : 'Unknown';
+                break;
+            case 'month':
+                key = d.entryDate ? d.entryDate.slice(0, 7) : 'Unknown';
+                break;
+            default: key = d.agent || 'Unknown';
+        }
+        if (!groups[key]) groups[key] = { premium: 0, count: 0 };
+        groups[key].premium += parseFloat(d.totalPremium) || 0;
+        groups[key].count   += 1;
+    });
+
+    let barData = Object.entries(groups).map(([label, g]) => {
+        const value = metric === 'count' ? g.count : metric === 'avg' ? (g.count > 0 ? g.premium / g.count : 0) : g.premium;
+        return { label, value, count: g.count, premium: g.premium };
+    });
+
+    // Sort: chronological for day/month, by value otherwise
+    if (groupBy === 'day' || groupBy === 'month') {
+        barData.sort((a, b) => a.label < b.label ? -1 : 1);
+    } else {
+        barData.sort((a, b) => b.value - a.value);
+    }
+
+    const maxVal   = Math.max(...barData.map(b => b.value), 1);
+    const fmtVal   = v => metric === 'count' ? v.toLocaleString() : ('$' + Math.round(v).toLocaleString());
+    const metricLbl = { premium:'Total Premium ($)', count:'Number of Policies', avg:'Avg Premium ($)' }[metric] || metric;
+    const groupLbl  = { agent:'Agent', carrier:'Carrier', lob:'Line of Business', location:'Location', policyType:'Policy Type', day:'Day', month:'Month' }[groupBy] || groupBy;
+    const palette   = ['#1d4ed8','#059669','#7c3aed','#dc2626','#d97706','#0891b2','#be185d','#065f46','#7c2d12','#1e3a5f','#4338ca','#0f766e'];
+
+    const barHTML = barData.length === 0
+        ? '<div style="text-align:center;padding:60px;color:#94a3b8;font-size:14px;">No data for this period.</div>'
+        : barData.map((b, i) => {
+            const pct   = Math.max((b.value / maxVal) * 100, 2).toFixed(1);
+            const color = palette[i % palette.length];
+            return `<div class="prod-bar-row">
+                <div class="prod-bar-label" title="${b.label}">${b.label}</div>
+                <div class="prod-bar-track">
+                    <div class="prod-bar-fill" style="width:${pct}%;background:${color};">
+                        <span>${fmtVal(b.value)}</span>
+                    </div>
+                </div>
+                <div class="prod-bar-count">${b.count} polic${b.count!==1?'ies':'y'}</div>
+            </div>`;
+        }).join('');
+
+    body.innerHTML = `
+        <!-- Chart controls -->
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:13px;font-weight:700;color:#334155;white-space:nowrap;">Group by:</label>
+                <select id="prodChartGroupBy" onchange="prodApplyFilters()"
+                    style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;min-width:160px;cursor:pointer;">
+                    <option value="agent"      ${groupBy==='agent'      ?'selected':''}>Agent</option>
+                    <option value="carrier"    ${groupBy==='carrier'    ?'selected':''}>Carrier</option>
+                    <option value="lob"        ${groupBy==='lob'        ?'selected':''}>Line of Business</option>
+                    <option value="policyType" ${groupBy==='policyType' ?'selected':''}>Policy Type</option>
+                    <option value="location"   ${groupBy==='location'   ?'selected':''}>Location</option>
+                    <option value="day"        ${groupBy==='day'        ?'selected':''}>Day</option>
+                    <option value="month"      ${groupBy==='month'      ?'selected':''}>Month</option>
+                </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:13px;font-weight:700;color:#334155;white-space:nowrap;">Show:</label>
+                <select id="prodChartMetric" onchange="prodApplyFilters()"
+                    style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;min-width:180px;cursor:pointer;">
+                    <option value="premium" ${metric==='premium'?'selected':''}>Total Premium ($)</option>
+                    <option value="count"   ${metric==='count'  ?'selected':''}>Number of Policies</option>
+                    <option value="avg"     ${metric==='avg'    ?'selected':''}>Average Premium ($)</option>
+                </select>
+            </div>
+            <div style="margin-left:auto;font-size:12px;color:#94a3b8;">${barData.length} group${barData.length!==1?'s':''} · ${data.length} polic${data.length!==1?'ies':'y'}</div>
+        </div>
+
+        <!-- Chart title -->
+        <h4 style="font-size:14px;font-weight:700;color:#0d1f3c;margin:0 0 16px;">
+            <i data-lucide="bar-chart-2" style="width:15px;height:15px;vertical-align:-2px;"></i>
+            ${metricLbl} <span style="color:#64748b;font-weight:500;">by</span> ${groupLbl}
+        </h4>
+
+        <!-- Bars -->
+        <div style="padding-bottom:12px;">${barHTML}</div>
+    `;
+    refreshIcons();
+}
+
+// ── Export ────────────────────────────────────────────────────
+function prodExportCSV() {
+    const data = prodGetFilteredData();
+    if (data.length === 0) { alert('No data to export for this period.'); return; }
+
+    const headers = ['Date','Agent','Client Name','Policy #','Binder #','Carrier','LOB','Policy Type','Location','Down','Agency Fee','Base Premium','Total Premium','Payment Type'];
+    const rows = data.map(d => [
+        d.entryDate         || '',
+        d.agent             || '',
+        d.customerName      || '',
+        d.policyNumber      || '',
+        d.binderNumber      || '',
+        d.company           || '',
+        d.lineOfBusiness    || '',
+        d.policyType        || '',
+        d.location          || '',
+        d.down              || 0,
+        d.agencyFee         || 0,
+        d.basePremium       || 0,
+        d.totalPremium      || 0,
+        d.paymentType       || ''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+
+    const csv  = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `production_${_prodPeriod}_${getEasternDateString()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
