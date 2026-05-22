@@ -3008,14 +3008,21 @@ function openUICEntryPicker() {
     refreshAllCarrierDropdowns();
 
     // Reset manual form
-    ['uicManualClientName','uicManualDownPmt','uicManualBasePrem','uicManualWrittenPrem','uicManualTerm','uicManualPolicyNum','uicManualRate','uicManualCommission']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    const manualStatus = document.getElementById('uicManualStatus');
+    ['uicManualClientName','uicManualDownPmt','uicManualAgencyFee','uicManualBasePrem','uicManualWrittenPrem','uicManualPolicyNum','uicManualRate','uicManualCommission']
+        .forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.value = ''; if (el.dataset) el.dataset.manualOverride = ''; }
+        });
+    const manualStatus   = document.getElementById('uicManualStatus');
     if (manualStatus) manualStatus.value = 'Active';
-    const manualTxn = document.getElementById('uicManualTransaction');
+    const manualTxn      = document.getElementById('uicManualTransaction');
     if (manualTxn) manualTxn.value = 'New';
-    const manualPmtType = document.getElementById('uicManualPaymentType');
+    const manualPmtType  = document.getElementById('uicManualPaymentType');
     if (manualPmtType) manualPmtType.value = '';
+    const manualCommType = document.getElementById('uicManualCommType');
+    if (manualCommType) manualCommType.value = '';
+    const manualTerm     = document.getElementById('uicManualTerm');
+    if (manualTerm) manualTerm.value = '';
     const rateNote = document.getElementById('uicManualRateNote');
     if (rateNote) rateNote.textContent = '';
 
@@ -3035,10 +3042,32 @@ function closeUICEntryPicker() {
 }
 
 // ── Manual entry helpers ──────────────────────────────────────
+
+// Auto-update Written Premium = Base Premium + Agency Fee
+function uicUpdateWrittenPrem() {
+    const base = parseFloat(document.getElementById('uicManualBasePrem')?.value) || 0;
+    const fee  = parseFloat(document.getElementById('uicManualAgencyFee')?.value) || 0;
+    const wp   = document.getElementById('uicManualWrittenPrem');
+    if (wp) wp.value = (base + fee > 0) ? (base + fee).toFixed(2) : '';
+}
+
+// Auto-convert decimal rate (e.g. 0.10 entered from spreadsheet) → percentage (10)
+function uicNormalizeRate() {
+    const field = document.getElementById('uicManualRate');
+    if (!field) return;
+    const v = parseFloat(field.value);
+    if (!isNaN(v) && v > 0 && v < 1) {
+        // User typed a decimal like 0.10 — convert to percentage
+        field.value = parseFloat((v * 100).toFixed(4));
+        field.dataset.manualOverride = '1';
+        uicManualCalcFromRate();
+    }
+}
+
 function uicAutoCalcManualCommission() {
     const carrier     = document.getElementById('uicManualCarrier')?.value    || '';
     const lob         = document.getElementById('uicManualLOB')?.value        || '';
-    const paymentType = document.getElementById('uicManualPaymentType')?.value || '';
+    const commType    = document.getElementById('uicManualCommType')?.value   || '';  // Monthly Paid / Gross Paid
     const transaction = document.getElementById('uicManualTransaction')?.value || 'New';
     const basePrem    = parseFloat(document.getElementById('uicManualBasePrem')?.value) || 0;
 
@@ -3046,20 +3075,22 @@ function uicAutoCalcManualCommission() {
     const rateField   = document.getElementById('uicManualRate');
     const commField   = document.getElementById('uicManualCommission');
 
-    if (!carrier || !lob || !paymentType || basePrem <= 0) {
+    if (!carrier || !lob || !commType || basePrem <= 0) {
         if (rateNote) rateNote.textContent = '';
         return;
     }
 
     const isRenewal = transaction === 'Renewal' || transaction === 'Rewrite';
-    const rate = getCommissionRate(carrier, lob, paymentType, isRenewal ? 'Renewal' : 'New');
+    // Use Commission Type (Monthly Paid / Gross Paid) for carrier rule lookup
+    const rate = getCommissionRate(carrier, lob, commType, isRenewal ? 'Renewal' : 'New');
 
     if (rate > 0) {
         if (rateField && !rateField.dataset.manualOverride) {
             rateField.value = rate;
         }
         const usedRate = parseFloat(rateField?.value) || rate;
-        const commission = calculateCommission(basePrem, usedRate);
+        // Direct carrier commission: Base Premium × Rate% (no agency split factor here)
+        const commission = parseFloat((basePrem * (usedRate / 100)).toFixed(2));
         if (commField) commField.value = commission.toFixed(2);
         if (rateNote) rateNote.textContent = `— auto (${rate}%)`;
     } else {
@@ -3073,10 +3104,11 @@ function uicManualCalcFromRate() {
     if (!rateField || !commField) return;
     // Mark as manually overridden so auto-calc won't overwrite it
     rateField.dataset.manualOverride = rateField.value ? '1' : '';
-    const rate    = parseFloat(rateField.value) || 0;
+    const rate     = parseFloat(rateField.value) || 0;
     const basePrem = parseFloat(document.getElementById('uicManualBasePrem')?.value) || 0;
     if (rate > 0 && basePrem > 0) {
-        commField.value = calculateCommission(basePrem, rate).toFixed(2);
+        // Direct calculation: Base × Rate% (carrier statement formula)
+        commField.value = parseFloat((basePrem * (rate / 100)).toFixed(2));
     }
 }
 
@@ -3085,21 +3117,29 @@ function uicSaveManualEntry() {
     const clientName  = document.getElementById('uicManualClientName')?.value.trim() || '';
     const carrier     = document.getElementById('uicManualCarrier')?.value      || '';
     const lob         = document.getElementById('uicManualLOB')?.value          || '';
-    const paymentType = document.getElementById('uicManualPaymentType')?.value  || '';
-    const commission  = parseFloat(document.getElementById('uicManualCommission')?.value) || 0;
+    const commType    = document.getElementById('uicManualCommType')?.value     || '';  // Monthly Paid / Gross Paid
+    const paymentType = document.getElementById('uicManualPaymentType')?.value  || '';  // EFT / Recurring / Direct
+    const commission  = parseFloat(document.getElementById('uicManualCommission')?.value);
     const rate        = parseFloat(document.getElementById('uicManualRate')?.value)       || 0;
     const basePrem    = parseFloat(document.getElementById('uicManualBasePrem')?.value)   || 0;
+    const agencyFee   = parseFloat(document.getElementById('uicManualAgencyFee')?.value)  || 0;
+    const writtenPrem = parseFloat(document.getElementById('uicManualWrittenPrem')?.value)|| 0;
+    const downPmt     = parseFloat(document.getElementById('uicManualDownPmt')?.value)    || 0;
+    const term        = document.getElementById('uicManualTerm')?.value         || '';
+    const policyNum   = document.getElementById('uicManualPolicyNum')?.value.trim() || '';
+    const status      = document.getElementById('uicManualStatus')?.value       || '';
+    const transaction = document.getElementById('uicManualTransaction')?.value  || '';
 
     // Validate required fields
-    if (!agent)       { alert('Please select an Agent.');             return; }
-    if (!clientName)  { alert('Please enter a Client Name.');         return; }
-    if (!carrier)     { alert('Please select a Carrier.');            return; }
-    if (!lob)         { alert('Please select a Line of Business.');   return; }
-    if (!paymentType) { alert('Please select a Payment Type.');       return; }
-    if (commission <= 0) { alert('Commission must be greater than 0. Check the Rate and Base Premium.'); return; }
+    if (!agent)      { alert('Please select an Agent.');           return; }
+    if (!clientName) { alert('Please enter a Client Name.');       return; }
+    if (!carrier)    { alert('Please select a Carrier.');          return; }
+    if (!lob)        { alert('Please select a Line of Business.'); return; }
+    if (!commType)   { alert('Please select a Commission Type (Monthly Paid or Gross Paid).'); return; }
+    if (isNaN(commission)) { alert('Please enter a Commission amount.'); return; }
 
     const month       = getMonthYear();
-    const carrierType = paymentType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
+    const carrierType = commType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
 
     let commData = JSON.parse(localStorage.getItem('commissionData')) || {};
     if (!commData[agent])                         commData[agent] = { monthlyPaidCommissionCarriers: {}, grossPaidCarriers: {} };
@@ -3112,7 +3152,11 @@ function uicSaveManualEntry() {
         existing.premium = parseFloat((existing.premium + basePrem).toFixed(2));
         if (lob && existing.lob !== lob && !existing.lob.includes(lob)) existing.lob += ', ' + lob;
     } else {
-        commData[agent][carrierType][carrier][month] = { amount: commission, lob, rate, premium: basePrem };
+        commData[agent][carrierType][carrier][month] = {
+            amount: commission, lob, rate, premium: basePrem,
+            agencyFee, writtenPrem, downPmt, term, policyNum,
+            status, transaction, paymentType, clientName
+        };
     }
 
     localStorage.setItem('commissionData', JSON.stringify(commData));

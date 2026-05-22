@@ -1666,14 +1666,38 @@
                             <!-- Down Payment -->
                             <div class="form-group">
                                 <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Down Payment ($)</label>
-                                <input id="uicManualDownPmt" type="number" step="0.01" min="0" placeholder="0.00"
+                                <input id="uicManualDownPmt" type="number" step="0.01" placeholder="0.00"
                                     style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
                             </div>
 
-                            <!-- Payment Type -->
+                            <!-- Agency Fee -->
                             <div class="form-group">
-                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Payment Type <span style="color:var(--danger);">*</span></label>
-                                <select id="uicManualPaymentType" onchange="uicAutoCalcManualCommission()"
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Agency Fee ($)
+                                    <span style="font-size:11px;color:#0066cc;font-weight:normal;">(added to base)</span>
+                                </label>
+                                <input id="uicManualAgencyFee" type="number" step="0.01" placeholder="0.00"
+                                    oninput="uicUpdateWrittenPrem(); uicAutoCalcManualCommission();"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
+                            </div>
+
+                            <!-- Payment Type (billing method) -->
+                            <div class="form-group">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Payment Type</label>
+                                <select id="uicManualPaymentType"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                                    <option value="">— Select —</option>
+                                    <option value="EFT">EFT</option>
+                                    <option value="Recurring Card Payment">Recurring Card Payment</option>
+                                    <option value="Direct Billing">Direct Billing</option>
+                                </select>
+                            </div>
+
+                            <!-- Commission Type (Monthly Paid / Gross Paid — for internal bucketing) -->
+                            <div class="form-group">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Commission Type <span style="color:var(--danger);">*</span>
+                                    <span style="font-size:11px;color:#0066cc;font-weight:normal;">(for ledger)</span>
+                                </label>
+                                <select id="uicManualCommType" onchange="uicAutoCalcManualCommission()"
                                     style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                                     <option value="">— Select —</option>
                                     <option value="Monthly Paid">Monthly Paid</option>
@@ -1685,22 +1709,28 @@
                             <div class="form-group">
                                 <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Base Premium ($) <span style="color:var(--danger);">*</span></label>
                                 <input id="uicManualBasePrem" type="number" step="0.01" min="0" placeholder="0.00"
-                                    oninput="uicAutoCalcManualCommission()"
+                                    oninput="uicAutoCalcManualCommission(); uicUpdateWrittenPrem();"
                                     style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
                             </div>
 
-                            <!-- Written Premium -->
+                            <!-- Written Premium (auto = Base + Agency Fee) -->
                             <div class="form-group">
-                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Written Premium ($)</label>
-                                <input id="uicManualWrittenPrem" type="number" step="0.01" min="0" placeholder="0.00"
-                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Written Premium ($)
+                                    <span style="font-size:11px;color:#0066cc;font-weight:normal;">(auto = base + fee)</span>
+                                </label>
+                                <input id="uicManualWrittenPrem" type="number" step="0.01" placeholder="0.00"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;background:#f8fafc;">
                             </div>
 
                             <!-- Term -->
                             <div class="form-group">
-                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Term</label>
-                                <input id="uicManualTerm" type="text" placeholder="e.g. 12"
-                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Term (months)</label>
+                                <select id="uicManualTerm"
+                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                                    <option value="">— Select —</option>
+                                    <option value="6">6</option>
+                                    <option value="12">12</option>
+                                </select>
                             </div>
 
                             <!-- Policy # -->
@@ -1715,8 +1745,9 @@
                                 <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Rate (%)
                                     <span id="uicManualRateNote" style="font-size:11px;color:#0066cc;font-weight:normal;"></span>
                                 </label>
-                                <input id="uicManualRate" type="number" step="0.01" min="0" placeholder="0.00"
+                                <input id="uicManualRate" type="number" step="0.01" min="0" placeholder="e.g. 10  or  0.10"
                                     oninput="uicManualCalcFromRate()"
+                                    onchange="uicNormalizeRate();"
                                     style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;box-sizing:border-box;">
                             </div>
 
@@ -2584,7 +2615,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260522r"></script>
-    <script src="app.js?v=20260522r"></script>
+    <script src="motion.js?v=20260522s"></script>
+    <script src="app.js?v=20260522s"></script>
 </body>
 </html>
