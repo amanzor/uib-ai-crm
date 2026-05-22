@@ -3,6 +3,65 @@
 // Shares localStorage with UIB Binder Book
 // ============================================================
 
+// ── IndexedDB — file storage ─────────────────────────────────
+let amsDB = null;
+
+function amsInitDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open('UIB_AMS_Files', 2);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('files')) {
+                const store = db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
+                store.createIndex('clientKey',  'clientKey',  { unique: false });
+                store.createIndex('uploadedAt', 'uploadedAt', { unique: false });
+                store.createIndex('category',   'category',   { unique: false });
+            }
+        };
+        req.onsuccess = e => { amsDB = e.target.result; resolve(amsDB); };
+        req.onerror   = e => { console.warn('IndexedDB error:', e.target.error); resolve(null); };
+    });
+}
+
+function amsDBAddFile(record) {
+    return new Promise((resolve, reject) => {
+        if (!amsDB) { reject('DB not ready'); return; }
+        const tx = amsDB.transaction('files', 'readwrite');
+        const req = tx.objectStore('files').add(record);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function amsDBGetFilesForClient(clientKey) {
+    return new Promise((resolve, reject) => {
+        if (!amsDB) { resolve([]); return; }
+        const tx  = amsDB.transaction('files', 'readonly');
+        const req = tx.objectStore('files').index('clientKey').getAll(clientKey);
+        req.onsuccess = e => resolve(e.target.result || []);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function amsDBGetFile(id) {
+    return new Promise((resolve, reject) => {
+        if (!amsDB) { resolve(null); return; }
+        const req = amsDB.transaction('files', 'readonly').objectStore('files').get(id);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function amsDBDeleteFile(id) {
+    return new Promise((resolve, reject) => {
+        if (!amsDB) { reject('DB not ready'); return; }
+        const tx  = amsDB.transaction('files', 'readwrite');
+        const req = tx.objectStore('files').delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
 // ── Shared constants (mirrors app.js) ───────────────────────
 const AMS_LOBS = [
     "BOP","Boat","Builders Risk","Business Owner","Classic Collectors",
@@ -154,13 +213,22 @@ function amsLaunchApp() {
     document.getElementById('amsUserLabel').textContent = amsCurrentUser;
     document.getElementById('amsUserAvatar').textContent = initials;
 
-    amsBuildClientIndex();
-    amsPopulateAgentFilter();
-    amsPopulateCarrierFilter();
-    amsRenderClientList();
-    amsPopulateModalDropdowns();
+    // Init IndexedDB for file storage, then load UI
+    amsInitDB().then(() => {
+        amsBuildClientIndex();
+        amsPopulateAgentFilter();
+        amsPopulateCarrierFilter();
+        amsRenderClientList();
+        amsPopulateModalDropdowns();
+        lucide.createIcons();
+    });
 
-    lucide.createIcons();
+    // Keyboard: Escape closes preview
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') amsClosePreview();
+        if (e.key === 'ArrowLeft')  amsPreviewNav(-1);
+        if (e.key === 'ArrowRight') amsPreviewNav(1);
+    });
 
     // Listen for storage changes from Binder Book
     window.addEventListener('storage', e => {
@@ -372,6 +440,7 @@ function amsLoadClientDetail(key) {
 
     amsRenderPolicies(key);
     amsRenderNotes(key);
+    amsUpdateDocBadge();
     amsShowTab('contact');
     lucide.createIcons();
 }
@@ -438,10 +507,12 @@ function amsRenderNotes(key) {
 
 // ── Tabs ─────────────────────────────────────────────────────
 function amsShowTab(tab) {
-    ['contact','policies','notes'].forEach(t => {
-        document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`).style.display = t === tab ? 'block' : 'none';
+    ['contact','policies','notes','documents'].forEach(t => {
+        const el = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (el) el.style.display = t === tab ? 'block' : 'none';
         document.querySelector(`.ams-tab[data-tab="${t}"]`)?.classList.toggle('active', t === tab);
     });
+    if (tab === 'documents' && amsActiveKey) amsRenderFileGrid();
 }
 
 // ── Save contact info ────────────────────────────────────────
@@ -640,4 +711,336 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('amsPolicyModal')?.addEventListener('click', e => {
         if (e.target === document.getElementById('amsPolicyModal')) amsClosePolicyModal();
     });
+    // Close preview on backdrop
+    document.getElementById('amsPreviewModal')?.addEventListener('click', e => {
+        if (e.target === document.getElementById('amsPreviewModal')) amsClosePreview();
+    });
 });
+
+
+// ============================================================
+// FILE / DOCUMENT MANAGEMENT (IndexedDB)
+// ============================================================
+
+let _amsCurrentFileList = [];  // files currently shown in grid (for prev/next nav)
+let _amsPreviewIdx      = -1;  // index in _amsCurrentFileList being previewed
+let _amsPreviewObjUrl   = null; // current object URL to revoke
+
+// ── File type helpers ─────────────────────────────────────────
+function amsFileIcon(type, name) {
+    const ext = (name || '').split('.').pop().toLowerCase();
+    if (type.startsWith('image/'))            return '🖼️';
+    if (type === 'application/pdf')           return '📄';
+    if (type.startsWith('video/'))            return '🎬';
+    if (type.startsWith('audio/'))            return '🎵';
+    if (type.startsWith('text/'))             return '📝';
+    if (ext === 'docx' || ext === 'doc')      return '📘';
+    if (ext === 'xlsx' || ext === 'xls')      return '📗';
+    if (ext === 'pptx' || ext === 'ppt')      return '📙';
+    if (ext === 'zip'  || ext === 'rar')      return '🗜️';
+    if (ext === 'csv')                        return '📊';
+    if (ext === 'json' || ext === 'xml')      return '🧾';
+    return '📁';
+}
+
+function amsFileColor(type, name) {
+    const ext = (name || '').split('.').pop().toLowerCase();
+    if (type.startsWith('image/'))       return '#8b5cf6';
+    if (type === 'application/pdf')      return '#dc2626';
+    if (type.startsWith('video/'))       return '#059669';
+    if (type.startsWith('audio/'))       return '#f59e0b';
+    if (ext === 'docx' || ext === 'doc') return '#1d4ed8';
+    if (ext === 'xlsx' || ext === 'xls') return '#059669';
+    if (ext === 'pptx' || ext === 'ppt') return '#ea580c';
+    return '#64748b';
+}
+
+function amsFormatSize(bytes) {
+    if (bytes < 1024)               return `${bytes} B`;
+    if (bytes < 1024 * 1024)        return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
+function amsCanPreview(type, name) {
+    const ext = (name || '').split('.').pop().toLowerCase();
+    return type.startsWith('image/')
+        || type === 'application/pdf'
+        || type.startsWith('video/')
+        || type.startsWith('audio/')
+        || type.startsWith('text/')
+        || ['csv','json','xml','html','htm','md','txt','log','js','css'].includes(ext);
+}
+
+// ── Upload handling ───────────────────────────────────────────
+function amsHandleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('amsUploadZone')?.classList.remove('drag-over');
+    const items = e.dataTransfer?.items;
+    if (items) {
+        const fileList = [];
+        for (let item of items) {
+            const entry = item.webkitGetAsEntry?.();
+            if (entry) {
+                _amsTraverseEntry(entry, '', fileList);
+            } else {
+                const f = item.getAsFile();
+                if (f) fileList.push({ file: f, path: '' });
+            }
+        }
+        // Wait briefly for traversal to settle then upload
+        setTimeout(() => amsUploadFiles(fileList), 100);
+    } else if (e.dataTransfer?.files?.length) {
+        const files = Array.from(e.dataTransfer.files).map(f => ({ file: f, path: '' }));
+        amsUploadFiles(files);
+    }
+}
+
+function _amsTraverseEntry(entry, path, list) {
+    if (entry.isFile) {
+        entry.file(f => list.push({ file: f, path }));
+    } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        reader.readEntries(entries => {
+            entries.forEach(child => _amsTraverseEntry(child, path ? `${path}/${entry.name}` : entry.name, list));
+        });
+    }
+}
+
+function amsHandleFileInput(e) {
+    const files = Array.from(e.target.files || []).map(f => ({ file: f, path: '' }));
+    amsUploadFiles(files);
+    e.target.value = '';
+}
+
+function amsHandleFolderInput(e) {
+    const files = Array.from(e.target.files || []).map(f => ({
+        file: f,
+        path: f.webkitRelativePath ? f.webkitRelativePath.split('/').slice(0, -1).join('/') : ''
+    }));
+    amsUploadFiles(files);
+    e.target.value = '';
+}
+
+async function amsUploadFiles(fileList) {
+    if (!amsActiveKey || !fileList.length) return;
+    if (!amsDB) { alert('Storage not ready. Please refresh.'); return; }
+
+    const category = document.getElementById('amsUploadCategory')?.value || 'Other';
+    const progWrap = document.getElementById('amsUploadProgress');
+    const progBar  = document.getElementById('amsUploadProgressBar');
+    const statEl   = document.getElementById('amsUploadStatus');
+    if (progWrap) progWrap.style.display = 'block';
+
+    let done = 0;
+    const total = fileList.length;
+    for (const { file, path } of fileList) {
+        if (statEl) statEl.textContent = `Uploading ${done + 1} of ${total}: ${file.name}`;
+        try {
+            const data = await file.arrayBuffer();
+            await amsDBAddFile({
+                clientKey:  amsActiveKey,
+                name:       file.name,
+                path:       path || '',
+                fullPath:   path ? `${path}/${file.name}` : file.name,
+                type:       file.type || 'application/octet-stream',
+                size:       file.size,
+                category,
+                uploadedAt: new Date().toISOString(),
+                uploadedBy: amsCurrentUser,
+                data
+            });
+        } catch (err) {
+            console.warn('Upload failed for', file.name, err);
+        }
+        done++;
+        if (progBar) progBar.style.width = `${Math.round((done / total) * 100)}%`;
+    }
+
+    if (progWrap) setTimeout(() => { progWrap.style.display = 'none'; if (progBar) progBar.style.width = '0%'; }, 800);
+    if (statEl)   setTimeout(() => { statEl.textContent = ''; }, 1500);
+
+    amsRenderFileGrid();
+    amsUpdateDocBadge();
+    amsFlashBanner(`${total} file${total > 1 ? 's' : ''} uploaded ✓`);
+}
+
+// ── Render file grid ──────────────────────────────────────────
+async function amsRenderFileGrid() {
+    const grid = document.getElementById('amsFileGrid');
+    if (!grid || !amsActiveKey) return;
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">Loading files…</div>';
+
+    const catFilter = document.getElementById('docCategorySelect')?.value || '';
+    let files = await amsDBGetFilesForClient(amsActiveKey);
+    if (catFilter) files = files.filter(f => f.category === catFilter);
+    files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    _amsCurrentFileList = files;
+
+    if (!files.length) {
+        grid.innerHTML = '<div class="fc-no-files">No documents found.<br><span style="font-size:12px;">Upload files using the area above.</span></div>';
+        return;
+    }
+
+    const cards = await Promise.all(files.map(async (f, idx) => {
+        const icon     = amsFileIcon(f.type, f.name);
+        const color    = amsFileColor(f.type, f.name);
+        const size     = amsFormatSize(f.size);
+        const date     = new Date(f.uploadedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+        const canPrev  = amsCanPreview(f.type, f.name);
+        const isImage  = f.type.startsWith('image/');
+
+        let thumbHtml;
+        if (isImage) {
+            // Build a temporary object URL for the thumbnail
+            const blob      = new Blob([f.data], { type: f.type });
+            const objUrl    = URL.createObjectURL(blob);
+            thumbHtml = `<img src="${objUrl}" alt="${amsEscHtml(f.name)}" onload="URL.revokeObjectURL(this.src)" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">`;
+        } else {
+            thumbHtml = `<div class="fc-type-icon" style="color:${color};">${icon}</div>`;
+        }
+
+        return `
+        <div class="file-card" onclick="amsPreviewFile(${idx})" title="${amsEscHtml(f.fullPath || f.name)}">
+            <button class="fc-del" onclick="event.stopPropagation(); amsDeleteFileById(${f.id})" title="Delete">✕</button>
+            <div class="fc-thumb">${thumbHtml}</div>
+            ${f.path ? `<div class="fc-path">${amsEscHtml(f.path)}/</div>` : ''}
+            <div class="fc-name">${amsEscHtml(f.name)}</div>
+            <div class="fc-meta">${size} · ${date}</div>
+            <div style="font-size:9px;color:var(--gray-300);margin-bottom:5px;">${amsEscHtml(f.category || '')}</div>
+            <div class="fc-actions">
+                ${canPrev ? `<button class="btn-primary btn-sm" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();amsPreviewFile(${idx})"><i data-lucide="eye" style="width:10px;height:10px;"></i> View</button>` : ''}
+                <button class="btn-secondary btn-sm" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();amsDownloadFile(${f.id})"><i data-lucide="download" style="width:10px;height:10px;"></i></button>
+            </div>
+        </div>`;
+    }));
+
+    grid.innerHTML = cards.join('');
+    lucide.createIcons();
+}
+
+// ── Delete file ───────────────────────────────────────────────
+async function amsDeleteFileById(id) {
+    if (!confirm('Delete this file permanently?')) return;
+    await amsDBDeleteFile(id);
+    amsRenderFileGrid();
+    amsUpdateDocBadge();
+    amsFlashBanner('File deleted');
+}
+
+// ── Download file ─────────────────────────────────────────────
+async function amsDownloadFile(id) {
+    const rec  = await amsDBGetFile(id);
+    if (!rec)  return;
+    const blob = new Blob([rec.data], { type: rec.type });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url; a.download = rec.name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+// ── Preview system ────────────────────────────────────────────
+async function amsPreviewFile(listIdx) {
+    const rec = _amsCurrentFileList[listIdx];
+    if (!rec) return;
+    _amsPreviewIdx = listIdx;
+    await _amsRenderPreview(rec);
+}
+
+async function _amsRenderPreview(rec) {
+    // Fetch fresh record with data
+    const full = await amsDBGetFile(rec.id);
+    if (!full) return;
+
+    // Revoke previous blob URL
+    if (_amsPreviewObjUrl) { URL.revokeObjectURL(_amsPreviewObjUrl); _amsPreviewObjUrl = null; }
+
+    const modal    = document.getElementById('amsPreviewModal');
+    const body     = document.getElementById('amsPreviewBody');
+    const nameEl   = document.getElementById('previewFileName');
+    const metaEl   = document.getElementById('previewFileMeta');
+
+    nameEl.textContent = full.fullPath || full.name;
+    metaEl.textContent = `${amsFormatSize(full.size)} · ${full.type || 'unknown type'}`;
+
+    const blob     = new Blob([full.data], { type: full.type });
+    const objUrl   = URL.createObjectURL(blob);
+    _amsPreviewObjUrl  = objUrl;
+
+    const type = full.type || '';
+    const ext  = (full.name || '').split('.').pop().toLowerCase();
+
+    if (type.startsWith('image/')) {
+        body.innerHTML = `<img src="${objUrl}" alt="${amsEscHtml(full.name)}">`;
+    } else if (type === 'application/pdf') {
+        body.innerHTML = `<iframe src="${objUrl}" title="${amsEscHtml(full.name)}"></iframe>`;
+    } else if (type.startsWith('video/')) {
+        body.innerHTML = `<video src="${objUrl}" controls autoplay style="max-width:100%;max-height:calc(100vh - 120px);"></video>`;
+    } else if (type.startsWith('audio/')) {
+        body.innerHTML = `<div style="text-align:center;color:white;"><div style="font-size:64px;margin-bottom:20px;">🎵</div><p style="margin-bottom:16px;">${amsEscHtml(full.name)}</p><audio src="${objUrl}" controls autoplay></audio></div>`;
+    } else if (type.startsWith('text/') || ['txt','csv','json','xml','html','htm','md','log','js','css','sql'].includes(ext)) {
+        const text = await blob.text();
+        // CSV → simple table preview
+        if (ext === 'csv') {
+            body.innerHTML = _amsCSVTable(text);
+        } else {
+            body.innerHTML = `<pre>${amsEscHtml(text)}</pre>`;
+        }
+    } else {
+        // Unsupported — offer download
+        body.innerHTML = `
+            <div class="preview-unsupported">
+                <div class="pu-icon">${amsFileIcon(type, full.name)}</div>
+                <h3>${amsEscHtml(full.name)}</h3>
+                <p>Preview not available for this file type (${type || ext}).</p>
+                <button class="btn-primary" onclick="amsDownloadCurrent()"><i data-lucide="download"></i> Download File</button>
+            </div>`;
+        lucide.createIcons();
+    }
+
+    modal.classList.add('open');
+}
+
+function _amsCSVTable(text) {
+    const rows = text.trim().split('\n').map(r => r.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+    if (!rows.length) return '<pre>Empty CSV</pre>';
+    const header = rows[0].map(h => `<th style="padding:6px 10px;background:#1e293b;color:#e2e8f0;font-size:12px;white-space:nowrap;">${amsEscHtml(h)}</th>`).join('');
+    const body   = rows.slice(1).map(r =>
+        `<tr>${r.map(c => `<td style="padding:5px 10px;font-size:12px;border-bottom:1px solid #e2e8f0;">${amsEscHtml(c)}</td>`).join('')}</tr>`
+    ).join('');
+    return `<div style="overflow:auto;max-width:100%;max-height:calc(100vh - 120px);background:white;border-radius:8px;"><table style="border-collapse:collapse;width:100%;"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+async function amsPreviewNav(dir) {
+    const next = _amsPreviewIdx + dir;
+    if (next < 0 || next >= _amsCurrentFileList.length) return;
+    _amsPreviewIdx = next;
+    await _amsRenderPreview(_amsCurrentFileList[_amsPreviewIdx]);
+}
+
+function amsClosePreview() {
+    document.getElementById('amsPreviewModal')?.classList.remove('open');
+    if (_amsPreviewObjUrl) { URL.revokeObjectURL(_amsPreviewObjUrl); _amsPreviewObjUrl = null; }
+    document.getElementById('amsPreviewBody').innerHTML = '';
+}
+
+async function amsDownloadCurrent() {
+    const rec = _amsCurrentFileList[_amsPreviewIdx];
+    if (rec) await amsDownloadFile(rec.id);
+}
+
+// ── Badge: show file count on Documents tab ───────────────────
+async function amsUpdateDocBadge() {
+    if (!amsActiveKey) return;
+    const files  = await amsDBGetFilesForClient(amsActiveKey);
+    const badge  = document.getElementById('docTabBadge');
+    if (!badge) return;
+    if (files.length > 0) {
+        badge.textContent = files.length;
+        badge.style.display = 'inline';
+    } else {
+        badge.style.display = 'none';
+    }
+}

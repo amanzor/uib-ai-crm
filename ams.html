@@ -265,6 +265,86 @@
         .tag-orange { background: #ffedd5; color: var(--orange); }
         .ams-sync-banner { display: none; position: fixed; bottom: 20px; right: 20px; background: var(--navy); color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
 
+        /* ── DOCUMENTS / FILE MANAGER ──────────────────────────────── */
+        .doc-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+        .doc-toolbar h3 { font-size:.95rem; font-weight:700; color:var(--navy); flex:1; border:none; padding:0; margin:0; }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 2px dashed var(--gray-300); border-radius: var(--radius-lg);
+            padding: 36px 24px; text-align: center; background: var(--gray-50);
+            transition: border-color .2s, background .2s; cursor: pointer; margin-bottom: 18px;
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: var(--blue-light); background: var(--blue-pale);
+        }
+        .upload-zone .uz-icon { font-size: 40px; margin-bottom: 10px; }
+        .upload-zone p { color: var(--gray-500); font-size: 13px; margin: 4px 0; }
+        .upload-zone .uz-btns { display:flex; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+
+        /* Category filter chips */
+        .cat-chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+        .cat-chip {
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1.5px solid var(--gray-200); background: white;
+            color: var(--gray-600); transition: all .12s;
+        }
+        .cat-chip.active { background: var(--blue); color: white; border-color: var(--blue); }
+        .cat-chip:hover:not(.active) { border-color: var(--blue-light); color: var(--blue); }
+
+        /* File grid */
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .file-card {
+            background: white; border: 1.5px solid var(--gray-200); border-radius: var(--radius-md);
+            padding: 14px 10px; text-align: center; cursor: pointer;
+            transition: box-shadow .15s, border-color .15s, transform .15s; position: relative;
+        }
+        .file-card:hover { box-shadow: var(--shadow-md); border-color: var(--blue-light); transform: translateY(-2px); }
+        .file-card .fc-thumb {
+            width: 60px; height: 60px; margin: 0 auto 10px; border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .file-card .fc-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-sm); }
+        .file-card .fc-thumb .fc-type-icon { font-size: 36px; line-height: 1; }
+        .file-card .fc-name { font-size: 11px; font-weight: 600; color: var(--gray-700); word-break: break-all; line-height: 1.3; margin-bottom: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .file-card .fc-meta { font-size: 10px; color: var(--gray-400); margin-bottom: 6px; }
+        .file-card .fc-actions { display: flex; gap: 4px; justify-content: center; }
+        .file-card .fc-del { position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; background:rgba(220,38,38,.1); color:var(--red); font-size:12px; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; border:none; cursor:pointer; padding:0; }
+        .file-card:hover .fc-del { opacity:1; }
+        .file-card .fc-path { font-size: 9.5px; color: var(--gray-300); word-break:break-all; margin-bottom:3px; }
+        .fc-no-files { text-align:center; padding:48px 20px; color:var(--gray-400); grid-column: 1 / -1; }
+        .upload-progress { background: var(--gray-100); border-radius: 6px; height: 6px; margin-top: 10px; overflow: hidden; display: none; }
+        .upload-progress-bar { height: 100%; background: var(--blue); border-radius: 6px; transition: width .2s; width: 0%; }
+
+        /* FILE PREVIEW MODAL */
+        .preview-modal {
+            display: none; position: fixed; inset: 0; z-index: 99999;
+            background: rgba(5,10,20,.88); backdrop-filter: blur(6px);
+            flex-direction: column;
+        }
+        .preview-modal.open { display: flex; }
+        .preview-header {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            background: rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.1);
+            flex-shrink: 0;
+        }
+        .preview-header .ph-name { color: white; font-weight: 600; font-size: 14px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .preview-header .ph-meta { color: rgba(255,255,255,.5); font-size: 12px; white-space: nowrap; }
+        .preview-nav { display:flex; gap:6px; }
+        .preview-nav button { background: rgba(255,255,255,.1); color: white; border: none; border-radius: var(--radius-sm); padding: 6px 10px; font-size: 13px; cursor: pointer; transition: background .12s; }
+        .preview-nav button:hover { background: rgba(255,255,255,.22); }
+        .preview-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 16px; min-height: 0; }
+        .preview-body iframe, .preview-body embed {
+            width: 100%; height: 100%; min-height: calc(100vh - 120px); border: none; border-radius: var(--radius-md); background: white;
+        }
+        .preview-body img { max-width: 100%; max-height: calc(100vh - 120px); border-radius: var(--radius-md); box-shadow: 0 8px 32px rgba(0,0,0,.5); object-fit: contain; }
+        .preview-body video, .preview-body audio { max-width: 100%; border-radius: var(--radius-md); box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+        .preview-body pre { background: #1e293b; color: #e2e8f0; padding: 24px; border-radius: var(--radius-md); font-size: 13px; line-height: 1.6; overflow: auto; max-width: 900px; max-height: calc(100vh - 120px); width: 100%; }
+        .preview-unsupported { text-align:center; color: rgba(255,255,255,.7); }
+        .preview-unsupported .pu-icon { font-size: 72px; margin-bottom: 16px; }
+        .preview-unsupported h3 { font-size: 1.1rem; margin-bottom: 8px; color: white; }
+        .preview-unsupported p  { font-size: 13px; margin-bottom: 20px; }
+
         /* ── RESPONSIVE ───────────────────────────────────────────── */
         @media (max-width: 768px) {
             .ams-sidebar { width: 100%; position: relative; top: auto; bottom: auto; left: auto; height: auto; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--gray-200); }
@@ -425,6 +505,7 @@
                         <button class="ams-tab active" data-tab="contact"   onclick="amsShowTab('contact')"><i data-lucide="user"></i> Contact Info</button>
                         <button class="ams-tab"         data-tab="policies" onclick="amsShowTab('policies')"><i data-lucide="file-text"></i> Policies</button>
                         <button class="ams-tab"         data-tab="notes"    onclick="amsShowTab('notes')"><i data-lucide="message-square"></i> Notes</button>
+                        <button class="ams-tab"         data-tab="documents" onclick="amsShowTab('documents')"><i data-lucide="folder-open"></i> Documents <span id="docTabBadge" style="display:none;background:var(--blue);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;margin-left:4px;"></span></button>
                     </div>
 
                     <!-- ── TAB: Contact Info ── -->
@@ -659,6 +740,71 @@
                         <div id="amsNotesList"></div>
                     </div><!-- /tabNotes -->
 
+                    <!-- ── TAB: Documents ── -->
+                    <div id="tabDocuments" style="display:none;">
+                        <div class="info-card">
+                            <div class="doc-toolbar">
+                                <h3><i data-lucide="folder-open"></i> Client Documents</h3>
+                                <select id="docCategorySelect" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:12px;background:white;" onchange="amsRenderFileGrid()">
+                                    <option value="">All Categories</option>
+                                    <option>Policy Documents</option>
+                                    <option>Identification</option>
+                                    <option>Proof of Insurance</option>
+                                    <option>Vehicle Documents</option>
+                                    <option>Claims</option>
+                                    <option>Correspondence</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+
+                            <!-- Upload Zone -->
+                            <div class="upload-zone" id="amsUploadZone"
+                                onclick="document.getElementById('amsFileInput').click()"
+                                ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                                ondragleave="this.classList.remove('drag-over')"
+                                ondrop="amsHandleDrop(event)">
+                                <div class="uz-icon">📁</div>
+                                <p><strong>Drag &amp; drop files here</strong> or click to browse</p>
+                                <p style="font-size:11px;color:var(--gray-300);">PDF, images, Word, Excel, video, audio and more</p>
+                                <div class="uz-btns">
+                                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); document.getElementById('amsFileInput').click()">
+                                        <i data-lucide="upload"></i> Upload Files
+                                    </button>
+                                    <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); document.getElementById('amsFolderInput').click()">
+                                        <i data-lucide="folder-plus"></i> Upload Folder
+                                    </button>
+                                </div>
+                                <div class="upload-progress" id="amsUploadProgress">
+                                    <div class="upload-progress-bar" id="amsUploadProgressBar"></div>
+                                </div>
+                                <p id="amsUploadStatus" style="font-size:11px;color:var(--blue);margin-top:6px;"></p>
+                            </div>
+
+                            <!-- Hidden file inputs -->
+                            <input type="file" id="amsFileInput"   multiple accept="*/*" style="display:none" onchange="amsHandleFileInput(event)">
+                            <input type="file" id="amsFolderInput" multiple webkitdirectory style="display:none" onchange="amsHandleFolderInput(event)">
+
+                            <!-- Category assign for upload -->
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+                                <label style="font-size:12px;font-weight:600;color:var(--gray-600);">Category for upload:</label>
+                                <select id="amsUploadCategory" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:12px;background:white;">
+                                    <option value="Other">Other</option>
+                                    <option>Policy Documents</option>
+                                    <option>Identification</option>
+                                    <option>Proof of Insurance</option>
+                                    <option>Vehicle Documents</option>
+                                    <option>Claims</option>
+                                    <option>Correspondence</option>
+                                </select>
+                            </div>
+
+                            <!-- File grid -->
+                            <div class="file-grid" id="amsFileGrid">
+                                <div class="fc-no-files">No documents uploaded yet.<br>Use the upload area above to add files.</div>
+                            </div>
+                        </div>
+                    </div><!-- /tabDocuments -->
+
                 </div><!-- /amsClientDetail -->
             </main><!-- /ams-main -->
         </div><!-- /ams-body -->
@@ -740,10 +886,29 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         FILE PREVIEW MODAL (full-screen lightbox)
+    ════════════════════════════════════════════════════════════ -->
+    <div class="preview-modal" id="amsPreviewModal">
+        <div class="preview-header">
+            <span class="ph-name" id="previewFileName">—</span>
+            <span class="ph-meta" id="previewFileMeta"></span>
+            <div class="preview-nav">
+                <button onclick="amsPreviewNav(-1)" title="Previous"><i data-lucide="chevron-left"></i></button>
+                <button onclick="amsPreviewNav(1)"  title="Next"><i data-lucide="chevron-right"></i></button>
+                <button onclick="amsDownloadCurrent()" title="Download"><i data-lucide="download"></i> Download</button>
+                <button onclick="amsClosePreview()" title="Close" style="background:rgba(220,38,38,.3);">
+                    <i data-lucide="x"></i> Close
+                </button>
+            </div>
+        </div>
+        <div class="preview-body" id="amsPreviewBody"></div>
+    </div>
+
     <!-- Sync banner -->
     <div class="ams-sync-banner" id="amsSyncBanner">Saving…</div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="ams.js?v=20260522t"></script>
+    <script src="ams.js?v=20260522v"></script>
 </body>
 </html>
