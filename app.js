@@ -310,22 +310,38 @@ const AGENTS = ['Alberto Manzor', 'Randy Diaz', 'Amanda Montano', 'Uriel Rendon'
 // Initialize credentials — structure: { "Agent Name": { email, password } }
 function initializeCredentials() {
     let credentials = JSON.parse(localStorage.getItem('agentCredentials'));
-    // Migrate old flat format (name → plaintext password) to new format
-    if (credentials && typeof Object.values(credentials)[0] === 'string') {
-        const migrated = {};
-        AGENTS.forEach(agent => {
-            migrated[agent] = { email: '', password: credentials[agent] || agent.split(' ')[0].toLowerCase() };
-        });
-        credentials = migrated;
-        localStorage.setItem('agentCredentials', JSON.stringify(credentials));
-    }
-    if (!credentials) {
+
+    // Start with empty object if nothing stored yet
+    if (!credentials || typeof credentials !== 'object') {
         credentials = {};
-        AGENTS.forEach(agent => {
-            credentials[agent] = { email: '', password: agent.split(' ')[0].toLowerCase() };
-        });
-        localStorage.setItem('agentCredentials', JSON.stringify(credentials));
     }
+
+    let changed = false;
+
+    // Per-entry migration: fix any individual entry still stored as a plain string
+    // — does NOT touch entries that are already in {email, password} format
+    Object.keys(credentials).forEach(agent => {
+        if (typeof credentials[agent] === 'string') {
+            credentials[agent] = { email: '', password: credentials[agent] };
+            changed = true;
+        }
+    });
+
+    // Add a default entry ONLY for agents that have no entry at all yet
+    // — never overwrites an existing entry, so saved emails are never lost
+    AGENTS.forEach(agent => {
+        if (!credentials[agent]) {
+            credentials[agent] = { email: '', password: agent.split(' ')[0].toLowerCase() };
+            changed = true;
+        }
+    });
+
+    // Persist only if something actually changed; use _origSetItem to bypass
+    // the Drive-push proxy so we don't push during cold init
+    if (changed) {
+        _origSetItem('agentCredentials', JSON.stringify(credentials));
+    }
+
     return credentials;
 }
 
@@ -1973,16 +1989,29 @@ function loadPasswordManagementTable() {
 }
 
 function updateAgentPassword(agent) {
-    const newPassword = document.getElementById(`pwd_${agent}`).value;
-    if (!newPassword || newPassword.trim() === '') {
+    const newPassword = document.getElementById(`pwd_${agent}`)?.value?.trim();
+    if (!newPassword) {
         alert('Password cannot be empty');
         return;
     }
 
     const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
-    // Preserve the existing email — only overwrite the password field
-    const existing = credentials[agent];
-    const email    = typeof existing === 'object' ? (existing.email || '') : '';
+    const existing    = credentials[agent];
+
+    // Preserve email from stored record — never blank it out
+    let email = '';
+    if (typeof existing === 'object' && existing !== null) {
+        email = existing.email || '';
+    }
+
+    // Also check the credential list page inputs in case the admin has typed
+    // a new email there but hasn't saved yet
+    const key = agent.replace(/\s+/g, '_');
+    const pageEmailInput = document.getElementById(`page_cred_email_${key}`);
+    if (pageEmailInput && pageEmailInput.value.trim()) {
+        email = pageEmailInput.value.trim();
+    }
+
     credentials[agent] = { email, password: newPassword };
     localStorage.setItem('agentCredentials', JSON.stringify(credentials));
     alert(`Password updated for ${agent}`);
