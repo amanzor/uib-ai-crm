@@ -656,7 +656,9 @@ function autoCalculateCommission() {
     const typeLabel = (policyType === 'Renewal' || policyType === 'Renew A-B') ? 'Renew' : 'New';
 
     if (rate > 0) {
-        const commission = parseFloat((basePremium * (rate / 100)).toFixed(2));
+        const agencyFee  = parseFloat(document.getElementById('agencyFee')?.value) || 0;
+        const carrierComm = parseFloat((basePremium * (rate / 100)).toFixed(2));
+        const commission  = parseFloat(((carrierComm + agencyFee) * 0.5).toFixed(2));
 
         // Populate the Agency Commission field
         const commField = document.getElementById('agencyCommission');
@@ -668,7 +670,8 @@ function autoCalculateCommission() {
             rateLabel.style.display = 'inline';
         }
         if (breakdown) {
-            breakdown.innerHTML = `💡 $${basePremium.toLocaleString()} × ${rate}% × 50% (${typeLabel}) = <strong>$${commission.toLocaleString()}</strong>`;
+            const feeStr = agencyFee > 0 ? ` + $${agencyFee.toLocaleString()}` : '';
+            breakdown.innerHTML = `💡 ($${basePremium.toLocaleString()} × ${rate}%${feeStr}) × 50% = <strong>$${commission.toLocaleString()}</strong>`;
             breakdown.style.display = 'block';
         }
 
@@ -907,7 +910,7 @@ function saveEntry() {
     const rate = getCommissionRate(carrier, lob, paymentType, policyType);
 
     if (rate > 0) {
-        const commission = calculateCommission(premium, rate);
+        const commission = calculateCommission(premium, rate, entry.agencyFee || 0);
         const month = new Date(entry.entryDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
         const carrierType = paymentType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
 
@@ -2462,9 +2465,9 @@ function getCommissionRate(carrierName, lob, paymentType, policyType) {
     }
 }
 
-function calculateCommission(premium, rate) {
-    // Commission = Base Premium × Carrier Rate% × 0.5
-    return parseFloat((premium * (rate / 100) * 0.5).toFixed(2));
+function calculateCommission(premium, rate, agencyFee = 0) {
+    // Commission = (Base Premium × Carrier Rate% + Agency Fee) × 0.5
+    return parseFloat(((premium * (rate / 100) + agencyFee) * 0.5).toFixed(2));
 }
 
 function getMonthYear() {
@@ -2491,10 +2494,11 @@ function recalculateAllCommissions() {
 
         if (!agent || !carrier || !lob || premium <= 0) return;
 
+        const agencyFee   = parseFloat(policy.agencyFee) || 0;
         const rate = getCommissionRate(carrier, lob, paymentType, policyType);
         if (rate <= 0) return;
 
-        const commission  = calculateCommission(premium, rate);
+        const commission  = calculateCommission(premium, rate, agencyFee);
         const carrierType = paymentType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
 
         // Build nested structure
@@ -2678,7 +2682,7 @@ function displayAllCommissions(commissions) {
 
     tbody.innerHTML = allCommissions.map(c => {
         const commissionDisplay = c.premium > 0 && c.rate > 0
-            ? `$${c.premium.toFixed(2)}×${c.rate}%×50%=$${c.amount.toFixed(2)}`
+            ? `($${c.premium.toFixed(2)}×${c.rate}%)×50%=$${c.amount.toFixed(2)}`
             : `$${c.amount.toFixed(2)}`;
         const deleteBtn = c.isAgentShare
             ? `<button class="btn-danger btn-sm" onclick="deleteAgentShareByMonth('${c.agent}','${c.month}')"><i data-lucide="trash-2"></i> Delete</button>`
@@ -3461,7 +3465,7 @@ function loadAgentCommissionData() {
                 const lob = typeof entry === 'object' ? entry.lob : '-';
                 const rate = typeof entry === 'object' ? entry.rate : 0;
                 const premium = typeof entry === 'object' ? entry.premium : 0;
-                const display = premium > 0 && rate > 0 ? `$${premium.toFixed(2)}×${rate}%×50%=$${amount.toFixed(2)}` : `$${amount.toFixed(2)}`;
+                const display = premium > 0 && rate > 0 ? `($${premium.toFixed(2)}×${rate}%)×50%=$${amount.toFixed(2)}` : `$${amount.toFixed(2)}`;
                 tableHTML += `<tr><td>${idx === 0 ? carrier : ''}</td><td>${lob}</td><td>${month}</td><td style="font-family: monospace; font-size: 0.95em;">${display}</td></tr>`;
             });
         });
