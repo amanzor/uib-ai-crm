@@ -1406,6 +1406,8 @@ function redownloadVerificationLog(id) {
 
 // ── Daily Sales Entry Modal ────────────────────────────────────
 let _selectedSalesLocation = '';
+// Tracks which select id should auto-select the carrier name after a carrier save
+let _carrierFormAutoSelect = null;
 
 function openDailySalesModal() {
     // Show location picker first
@@ -2026,7 +2028,9 @@ function loadCarrierList() {
     refreshIcons();
 }
 
-function openAddCarrierModal() {
+function openAddCarrierModal(targetSelectId) {
+    // Remember which dropdown should auto-select the new carrier after save
+    _carrierFormAutoSelect = targetSelectId || null;
     document.getElementById('carrierFormTitle').textContent = 'Add New Carrier';
     document.getElementById('carrierForm').reset();
     document.getElementById('commissionRulesTable').innerHTML = '<tr><td colspan="5" class="no-data" style="text-align: center;">No commission rules yet. Click "Add Rule" to add one.</td></tr>';
@@ -2041,6 +2045,7 @@ function closeAddEditCarrierModal() {
 }
 
 function editCarrier(carrierName) {
+    _carrierFormAutoSelect = null; // editing existing — no auto-select needed
     const carriers = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
     const carrier = carriers[carrierName];
 
@@ -2187,10 +2192,18 @@ document.getElementById('carrierForm')?.addEventListener('submit', (e) => {
     // Update global variable
     carrierMasterData = carriers;
 
-    alert(`Carrier "${carrierName}" saved successfully!`);
     closeAddEditCarrierModal();
     loadCarrierList();
     refreshAllCarrierDropdowns();
+
+    // Auto-select the new/edited carrier in the dropdown that triggered this modal
+    if (_carrierFormAutoSelect) {
+        const sel = document.getElementById(_carrierFormAutoSelect);
+        if (sel) sel.value = carrierName;
+        _carrierFormAutoSelect = null;
+    }
+
+    alert(`Carrier "${carrierName}" saved successfully!`);
 
     // Trigger recalculation of commissions for existing policies
     recalculateAllCommissions();
