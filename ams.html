@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIB AMS — Agency Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Design Tokens (mirrors UIB Binder Book) ──────────────── */
+        :root {
+            --navy:       #0d1f3c;
+            --blue:       #1d4ed8;
+            --blue-mid:   #2563eb;
+            --blue-light: #3b82f6;
+            --blue-pale:  #eff6ff;
+            --green:      #059669;
+            --green-pale: #ecfdf5;
+            --red:        #dc2626;
+            --red-pale:   #fef2f2;
+            --purple:     #7c3aed;
+            --orange:     #ea580c;
+            --gray-50:    #f8fafc;
+            --gray-100:   #f1f5f9;
+            --gray-200:   #e2e8f0;
+            --gray-300:   #cbd5e1;
+            --gray-400:   #94a3b8;
+            --gray-500:   #64748b;
+            --gray-700:   #334155;
+            --gray-900:   #0f172a;
+            --white:      #ffffff;
+            --sidebar-w:  320px;
+            --header-h:   64px;
+            --radius-sm:  6px;
+            --radius-md:  10px;
+            --radius-lg:  16px;
+            --shadow-sm:  0 1px 3px rgba(0,0,0,.08);
+            --shadow-md:  0 4px 12px rgba(0,0,0,.08);
+            --shadow-lg:  0 12px 32px rgba(0,0,0,.10);
+            --shadow-xl:  0 30px 60px rgba(0,0,0,.18);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background: var(--gray-50); -webkit-font-smoothing: antialiased; }
+
+        /* ── Buttons ──────────────────────────────────────────────── */
+        button { cursor: pointer; border: none; font-family: inherit; font-size: 14px; font-weight: 600; border-radius: var(--radius-sm); transition: all .15s; position: relative; overflow: hidden; padding: 9px 18px; letter-spacing: .2px; }
+        .btn-primary  { background: var(--blue);   color: #fff; box-shadow: 0 1px 3px rgba(29,78,216,.3); }
+        .btn-primary:hover  { background: #1a44c0; transform: translateY(-1px); }
+        .btn-success  { background: var(--green);  color: #fff; box-shadow: 0 1px 3px rgba(5,150,105,.3); }
+        .btn-success:hover  { background: #047857; transform: translateY(-1px); }
+        .btn-danger   { background: var(--red);    color: #fff; box-shadow: 0 1px 3px rgba(220,38,38,.3); }
+        .btn-danger:hover   { background: #b91c1c; transform: translateY(-1px); }
+        .btn-secondary { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-200); box-shadow: var(--shadow-sm); }
+        .btn-secondary:hover { background: var(--gray-200); }
+        .btn-sm  { padding: 6px 12px; font-size: 12px; }
+        .btn-icon { padding: 6px 8px; font-size: 13px; }
+
+        /* ── LOGIN SCREEN ─────────────────────────────────────────── */
+        #amsLoginScreen {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0d1f3c 0%, #163057 55%, #1d4ed8 100%);
+        }
+        .login-card {
+            background: white; border-radius: var(--radius-lg); padding: 40px 36px;
+            max-width: 420px; width: 100%; box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255,255,255,.1);
+        }
+        .login-card .brand { text-align: center; margin-bottom: 28px; }
+        .login-card .brand-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--navy); color: white; padding: 10px 20px;
+            border-radius: var(--radius-md); font-weight: 800; font-size: 15px;
+            margin-bottom: 12px;
+        }
+        .login-card h2 { color: var(--navy); font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+        .login-card p  { color: var(--gray-400); font-size: .85rem; }
+        .login-field { margin-bottom: 14px; }
+        .login-field label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 5px; }
+        .login-field input {
+            width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200);
+            border-radius: var(--radius-sm); font-family: inherit; font-size: 14px;
+            transition: border-color .15s;
+        }
+        .login-field input:focus { outline: none; border-color: var(--blue-light); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+        .login-error { color: var(--red); font-size: 13px; text-align: center; margin: 8px 0; display: none; }
+        .login-back { display: block; text-align: center; margin-top: 16px; color: var(--blue); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .login-back:hover { text-decoration: underline; }
+
+        /* ── TOP HEADER ───────────────────────────────────────────── */
+        #amsApp { display: none; min-height: 100vh; flex-direction: column; }
+        #amsApp.visible { display: flex; }
+
+        .ams-header {
+            height: var(--header-h); background: linear-gradient(135deg, #0d1f3c 0%, #163057 55%, #1d4ed8 100%);
+            display: flex; align-items: center; padding: 0 20px; gap: 16px;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            box-shadow: 0 2px 12px rgba(0,0,0,.25);
+        }
+        .ams-header .logo { color: white; font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .ams-header .logo .badge { background: rgba(255,255,255,.18); padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+        .ams-header .search-wrap { flex: 1; max-width: 480px; position: relative; }
+        .ams-header .search-wrap input {
+            width: 100%; padding: 8px 14px 8px 36px; border-radius: 20px;
+            border: none; background: rgba(255,255,255,.12); color: white;
+            font-family: inherit; font-size: 13px; transition: background .15s;
+        }
+        .ams-header .search-wrap input::placeholder { color: rgba(255,255,255,.55); }
+        .ams-header .search-wrap input:focus { outline: none; background: rgba(255,255,255,.22); }
+        .ams-header .search-wrap .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.6); pointer-events: none; }
+        .ams-header .user-chip { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+        .ams-header .user-chip span { color: rgba(255,255,255,.85); font-size: 13px; }
+        .ams-header .user-chip .avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.2); color: white; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+
+        /* ── MAIN BODY LAYOUT ─────────────────────────────────────── */
+        .ams-body { display: flex; flex: 1; padding-top: var(--header-h); min-height: 100vh; }
+
+        /* ── LEFT SIDEBAR ─────────────────────────────────────────── */
+        .ams-sidebar {
+            width: var(--sidebar-w); flex-shrink: 0;
+            background: white; border-right: 1px solid var(--gray-200);
+            display: flex; flex-direction: column;
+            position: fixed; top: var(--header-h); bottom: 0; left: 0;
+            overflow: hidden; z-index: 100;
+        }
+        .sidebar-toolbar {
+            padding: 14px 12px 10px; border-bottom: 1px solid var(--gray-100);
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .sidebar-search {
+            position: relative;
+        }
+        .sidebar-search input {
+            width: 100%; padding: 8px 10px 8px 32px; border: 1.5px solid var(--gray-200);
+            border-radius: var(--radius-sm); font-family: inherit; font-size: 13px;
+            transition: border-color .15s;
+        }
+        .sidebar-search input:focus { outline: none; border-color: var(--blue-light); }
+        .sidebar-search .s-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none; }
+        .sidebar-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+        .sidebar-filters select {
+            flex: 1; padding: 6px 8px; border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm); font-family: inherit; font-size: 12px;
+            background: var(--gray-50); color: var(--gray-700); min-width: 90px;
+        }
+        .sidebar-stat { padding: 8px 12px; background: var(--blue-pale); border-radius: var(--radius-sm); font-size: 12px; color: var(--blue-mid); font-weight: 600; text-align: center; }
+
+        .client-list { flex: 1; overflow-y: auto; }
+        .client-card {
+            padding: 12px 14px; border-bottom: 1px solid var(--gray-100);
+            cursor: pointer; transition: background .1s; position: relative;
+        }
+        .client-card:hover { background: var(--blue-pale); }
+        .client-card.active { background: var(--blue-pale); border-right: 3px solid var(--blue); }
+        .client-card .cc-name { font-weight: 700; font-size: 13px; color: var(--gray-900); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .client-card .cc-meta { font-size: 11px; color: var(--gray-400); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .cc-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: .3px; }
+        .cc-badge.policies  { background: #dbeafe; color: var(--blue); }
+        .cc-badge.agent     { background: #f0fdf4; color: var(--green); }
+        .no-results { padding: 32px 16px; text-align: center; color: var(--gray-400); font-size: 13px; }
+
+        /* ── MAIN DETAIL PANEL ────────────────────────────────────── */
+        .ams-main { flex: 1; margin-left: var(--sidebar-w); overflow-y: auto; padding: 28px 32px; }
+
+        /* Welcome placeholder */
+        .ams-welcome {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 60vh; color: var(--gray-400); text-align: center;
+        }
+        .ams-welcome .icon-ring { width: 80px; height: 80px; border-radius: 50%; background: var(--gray-100); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+        .ams-welcome h3 { color: var(--gray-500); font-size: 1.1rem; margin-bottom: 6px; }
+        .ams-welcome p  { font-size: .85rem; }
+
+        /* Client detail header */
+        .client-header {
+            display: flex; align-items: flex-start; gap: 18px; margin-bottom: 24px;
+            background: white; padding: 22px 24px; border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200); box-shadow: var(--shadow-sm);
+        }
+        .client-avatar {
+            width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--blue) 0%, var(--navy) 100%);
+            color: white; font-size: 20px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .client-header-info { flex: 1; min-width: 0; }
+        .client-header-info h2 { font-size: 1.4rem; font-weight: 800; color: var(--gray-900); margin-bottom: 4px; }
+        .client-header-info .meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--gray-500); }
+        .client-header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+
+        /* Tabs */
+        .ams-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); margin-bottom: 24px; }
+        .ams-tab {
+            padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--gray-500);
+            cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent;
+            margin-bottom: -2px; transition: color .15s, border-color .15s;
+        }
+        .ams-tab:hover { color: var(--blue); }
+        .ams-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+        /* ── CONTACT INFO SECTION ─────────────────────────────────── */
+        .info-card {
+            background: white; border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .info-card h3 {
+            font-size: .95rem; font-weight: 700; color: var(--navy); margin-bottom: 18px;
+            padding-bottom: 12px; border-bottom: 2px solid var(--blue-light);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+        .info-field { display: flex; flex-direction: column; gap: 4px; }
+        .info-field label { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .5px; }
+        .info-field input, .info-field select, .info-field textarea {
+            padding: 8px 10px; border: 1.5px solid var(--gray-200);
+            border-radius: var(--radius-sm); font-family: inherit; font-size: 13px;
+            color: var(--gray-900); transition: border-color .15s;
+        }
+        .info-field input:focus, .info-field select:focus, .info-field textarea:focus {
+            outline: none; border-color: var(--blue-light); box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+        }
+        .info-field textarea { resize: vertical; min-height: 80px; }
+        .info-field .view-val { font-size: 13px; color: var(--gray-700); font-weight: 500; padding: 2px 0; }
+        .info-field .view-val.empty { color: var(--gray-300); font-style: italic; }
+        .info-actions { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
+
+        /* ── POLICIES TABLE ───────────────────────────────────────── */
+        .policy-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+        .policy-toolbar h3 { font-size: .95rem; font-weight: 700; color: var(--navy); flex: 1; }
+        .policies-table-wrap { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--gray-200); box-shadow: var(--shadow-sm); }
+        .policies-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 700px; }
+        .policies-table thead { background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%); }
+        .policies-table thead th { padding: 11px 14px; text-align: left; color: white; font-weight: 600; font-size: 11.5px; letter-spacing: .3px; white-space: nowrap; }
+        .policies-table tbody tr { border-bottom: 1px solid var(--gray-100); transition: background .1s; }
+        .policies-table tbody tr:last-child { border-bottom: none; }
+        .policies-table tbody tr:hover { background: var(--blue-pale); }
+        .policies-table td { padding: 10px 14px; color: var(--gray-700); vertical-align: middle; }
+        .status-pill { padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+        .status-active  { background: #d1fae5; color: #065f46; }
+        .status-expired { background: #fee2e2; color: #991b1b; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+
+        /* ── NOTES ────────────────────────────────────────────────── */
+        .note-entry { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; }
+        .note-entry .note-meta { font-size: 11px; color: var(--gray-400); margin-bottom: 6px; }
+        .note-entry .note-text { font-size: 13px; color: var(--gray-700); white-space: pre-wrap; }
+        .add-note-area { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 14px; }
+        .add-note-area textarea { width: 100%; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 8px 10px; font-family: inherit; font-size: 13px; resize: vertical; min-height: 90px; }
+        .add-note-area textarea:focus { outline: none; border-color: var(--blue-light); }
+
+        /* ── MODAL ────────────────────────────────────────────────── */
+        .ams-modal { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15,23,42,.55); backdrop-filter: blur(4px); align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
+        .ams-modal.open { display: flex; }
+        .ams-modal-box { background: white; border-radius: var(--radius-lg); padding: 28px; max-width: 680px; width: 100%; box-shadow: var(--shadow-xl); margin: auto; }
+        .ams-modal-box h3 { color: var(--navy); font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--gray-200); }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+
+        /* ── MISC ─────────────────────────────────────────────────── */
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .tag-blue   { background: #dbeafe; color: var(--blue); }
+        .tag-green  { background: #d1fae5; color: var(--green); }
+        .tag-purple { background: #ede9fe; color: var(--purple); }
+        .tag-orange { background: #ffedd5; color: var(--orange); }
+        .ams-sync-banner { display: none; position: fixed; bottom: 20px; right: 20px; background: var(--navy); color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+
+        /* ── RESPONSIVE ───────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .ams-sidebar { width: 100%; position: relative; top: auto; bottom: auto; left: auto; height: auto; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--gray-200); }
+            .ams-body { flex-direction: column; }
+            .ams-main { margin-left: 0; padding: 16px 12px; }
+            .ams-header .search-wrap { display: none; }
+            .client-header { flex-direction: column; }
+        }
+        @media (max-width: 480px) {
+            .ams-main { padding: 10px 8px; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+
+        svg.lucide { display: inline-block; width: 15px; height: 15px; stroke-width: 2; vertical-align: -0.14em; pointer-events: none; flex-shrink: 0; }
+        h3 svg.lucide { width: 17px; height: 17px; vertical-align: -0.22em; }
+    </style>
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         LOGIN SCREEN
+    ════════════════════════════════════════════════════════════ -->
+    <div id="amsLoginScreen">
+        <div class="login-card">
+            <div class="brand">
+                <div class="brand-badge">
+                    <i data-lucide="building-2"></i> UIB AMS
+                </div>
+                <h2>Agency Management System</h2>
+                <p>Universal Insurance Brokers</p>
+            </div>
+
+            <!-- Agent login -->
+            <div id="amsAgentLoginForm">
+                <div class="login-field">
+                    <label>Email Address</label>
+                    <input type="email" id="amsLoginEmail" placeholder="your@email.com" autocomplete="username">
+                </div>
+                <div class="login-field">
+                    <label>Password</label>
+                    <input type="password" id="amsLoginPassword" placeholder="••••••••" autocomplete="current-password"
+                        onkeydown="if(event.key==='Enter') amsDoLogin()">
+                </div>
+                <div class="login-error" id="amsLoginError">Invalid email or password.</div>
+                <button class="btn-primary" style="width:100%;margin-top:4px;" onclick="amsDoLogin()">
+                    <i data-lucide="log-in"></i> Sign In
+                </button>
+                <div style="margin-top:14px;text-align:center;">
+                    <span style="font-size:12px;color:var(--gray-400);">Admin access? </span>
+                    <span style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;" onclick="amsShowAdminLogin()">Use admin login</span>
+                </div>
+            </div>
+
+            <!-- Admin login (hidden by default) -->
+            <div id="amsAdminLoginForm" style="display:none;">
+                <div class="login-field">
+                    <label>Admin Password</label>
+                    <input type="password" id="amsAdminPassword" placeholder="Admin password"
+                        onkeydown="if(event.key==='Enter') amsDoAdminLogin()">
+                </div>
+                <div class="login-error" id="amsAdminLoginError">Incorrect password.</div>
+                <button class="btn-primary" style="width:100%;margin-top:4px;" onclick="amsDoAdminLogin()">
+                    <i data-lucide="lock"></i> Admin Sign In
+                </button>
+                <span class="login-back" onclick="amsShowAgentLogin()">← Back to agent login</span>
+            </div>
+
+            <a href="index.html" class="login-back" style="margin-top:20px;">← Back to Binder Book</a>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN AMS APP
+    ════════════════════════════════════════════════════════════ -->
+    <div id="amsApp">
+
+        <!-- Header -->
+        <header class="ams-header">
+            <div class="logo">
+                <i data-lucide="building-2" style="width:20px;height:20px;"></i>
+                UIB AMS
+                <span class="badge">Agency Management</span>
+            </div>
+            <div class="search-wrap">
+                <span class="search-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
+                <input type="text" id="amsGlobalSearch" placeholder="Search clients by name, phone, policy #…"
+                    oninput="amsSearch(this.value)">
+            </div>
+            <div class="user-chip">
+                <span id="amsUserLabel">—</span>
+                <div class="avatar" id="amsUserAvatar">?</div>
+                <button class="btn-secondary btn-sm" onclick="amsLogout()">
+                    <i data-lucide="log-out"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Body -->
+        <div class="ams-body">
+
+            <!-- ── LEFT SIDEBAR ── -->
+            <aside class="ams-sidebar">
+                <div class="sidebar-toolbar">
+                    <div class="sidebar-search">
+                        <span class="s-icon"><i data-lucide="search" style="width:13px;height:13px;"></i></span>
+                        <input type="text" id="amsSidebarSearch" placeholder="Search clients…"
+                            oninput="amsSearch(this.value)">
+                    </div>
+                    <div class="sidebar-filters">
+                        <select id="amsAgentFilter" onchange="amsApplyFilters()">
+                            <option value="">All Agents</option>
+                        </select>
+                        <select id="amsCarrierFilter" onchange="amsApplyFilters()">
+                            <option value="">All Carriers</option>
+                        </select>
+                    </div>
+                    <div class="sidebar-stat" id="amsClientCount">0 clients</div>
+                </div>
+                <div class="client-list" id="amsClientList">
+                    <div class="no-results">Loading clients…</div>
+                </div>
+            </aside>
+
+            <!-- ── MAIN DETAIL ── -->
+            <main class="ams-main">
+
+                <!-- Welcome state -->
+                <div class="ams-welcome" id="amsWelcome">
+                    <div class="icon-ring">
+                        <i data-lucide="users" style="width:36px;height:36px;color:var(--gray-300);"></i>
+                    </div>
+                    <h3>Select a Client</h3>
+                    <p>Choose a client from the list on the left to view and manage their profile.</p>
+                </div>
+
+                <!-- Client detail -->
+                <div id="amsClientDetail" style="display:none;">
+
+                    <!-- Client header -->
+                    <div class="client-header">
+                        <div class="client-avatar" id="detailAvatar">??</div>
+                        <div class="client-header-info">
+                            <h2 id="detailName">—</h2>
+                            <div class="meta" id="detailMeta"></div>
+                        </div>
+                        <div class="client-header-actions">
+                            <button class="btn-primary btn-sm" onclick="amsOpenAddPolicyModal()">
+                                <i data-lucide="plus"></i> Add Policy
+                            </button>
+                            <button class="btn-secondary btn-sm" onclick="amsPrintClient()">
+                                <i data-lucide="printer"></i> Print
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="ams-tabs">
+                        <button class="ams-tab active" data-tab="contact"   onclick="amsShowTab('contact')"><i data-lucide="user"></i> Contact Info</button>
+                        <button class="ams-tab"         data-tab="policies" onclick="amsShowTab('policies')"><i data-lucide="file-text"></i> Policies</button>
+                        <button class="ams-tab"         data-tab="notes"    onclick="amsShowTab('notes')"><i data-lucide="message-square"></i> Notes</button>
+                    </div>
+
+                    <!-- ── TAB: Contact Info ── -->
+                    <div id="tabContact">
+                        <div class="info-card">
+                            <h3><i data-lucide="user"></i> Personal Information</h3>
+                            <div class="info-grid">
+                                <div class="info-field">
+                                    <label>First Name</label>
+                                    <input type="text" id="ci_firstName" placeholder="First name">
+                                </div>
+                                <div class="info-field">
+                                    <label>Last Name</label>
+                                    <input type="text" id="ci_lastName" placeholder="Last name">
+                                </div>
+                                <div class="info-field">
+                                    <label>Date of Birth</label>
+                                    <input type="date" id="ci_dob">
+                                </div>
+                                <div class="info-field">
+                                    <label>Gender</label>
+                                    <select id="ci_gender">
+                                        <option value="">— Select —</option>
+                                        <option>Male</option>
+                                        <option>Female</option>
+                                        <option>Non-binary</option>
+                                        <option>Prefer not to say</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>Marital Status</label>
+                                    <select id="ci_marital">
+                                        <option value="">— Select —</option>
+                                        <option>Single</option>
+                                        <option>Married</option>
+                                        <option>Divorced</option>
+                                        <option>Widowed</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>SSN (last 4)</label>
+                                    <input type="text" id="ci_ssn4" placeholder="••••" maxlength="4">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h3><i data-lucide="phone"></i> Contact Details</h3>
+                            <div class="info-grid">
+                                <div class="info-field">
+                                    <label>Phone (Primary)</label>
+                                    <input type="tel" id="ci_phone1" placeholder="(305) 555-1234">
+                                </div>
+                                <div class="info-field">
+                                    <label>Phone (Secondary)</label>
+                                    <input type="tel" id="ci_phone2" placeholder="(305) 555-5678">
+                                </div>
+                                <div class="info-field">
+                                    <label>Email Address</label>
+                                    <input type="email" id="ci_email" placeholder="client@email.com">
+                                </div>
+                                <div class="info-field">
+                                    <label>Preferred Contact</label>
+                                    <select id="ci_prefContact">
+                                        <option value="">— Select —</option>
+                                        <option>Phone</option>
+                                        <option>Email</option>
+                                        <option>Text</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h3><i data-lucide="map-pin"></i> Address</h3>
+                            <div class="info-grid">
+                                <div class="info-field" style="grid-column: span 2;">
+                                    <label>Street Address</label>
+                                    <input type="text" id="ci_address" placeholder="123 Main Street, Apt 4B">
+                                </div>
+                                <div class="info-field">
+                                    <label>City</label>
+                                    <input type="text" id="ci_city" placeholder="Miami">
+                                </div>
+                                <div class="info-field">
+                                    <label>State</label>
+                                    <select id="ci_state">
+                                        <option value="">— Select —</option>
+                                        <option>FL</option><option>GA</option><option>TX</option><option>NY</option><option>CA</option>
+                                        <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+                                        <option>CO</option><option>CT</option><option>DE</option><option>HI</option>
+                                        <option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+                                        <option>KS</option><option>KY</option><option>LA</option><option>ME</option>
+                                        <option>MD</option><option>MA</option><option>MI</option><option>MN</option>
+                                        <option>MS</option><option>MO</option><option>MT</option><option>NE</option>
+                                        <option>NV</option><option>NH</option><option>NJ</option><option>NM</option>
+                                        <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+                                        <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+                                        <option>SD</option><option>TN</option><option>UT</option><option>VT</option>
+                                        <option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>ZIP Code</label>
+                                    <input type="text" id="ci_zip" placeholder="33101" maxlength="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h3><i data-lucide="credit-card"></i> ID &amp; License</h3>
+                            <div class="info-grid">
+                                <div class="info-field">
+                                    <label>Driver's License #</label>
+                                    <input type="text" id="ci_dlNum" placeholder="D12345678">
+                                </div>
+                                <div class="info-field">
+                                    <label>DL State</label>
+                                    <select id="ci_dlState">
+                                        <option value="">— Select —</option>
+                                        <option>FL</option><option>GA</option><option>TX</option><option>NY</option><option>CA</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>DL Expiration</label>
+                                    <input type="date" id="ci_dlExp">
+                                </div>
+                                <div class="info-field">
+                                    <label>Language</label>
+                                    <select id="ci_language">
+                                        <option value="">— Select —</option>
+                                        <option>English</option>
+                                        <option>Spanish</option>
+                                        <option>Portuguese</option>
+                                        <option>French</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h3><i data-lucide="briefcase"></i> Agency Info</h3>
+                            <div class="info-grid">
+                                <div class="info-field">
+                                    <label>Assigned Agent</label>
+                                    <select id="ci_assignedAgent">
+                                        <option value="">— Select —</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>CSR Name</label>
+                                    <input type="text" id="ci_csrName" placeholder="CSR who handles account">
+                                </div>
+                                <div class="info-field">
+                                    <label>Dealer / Location</label>
+                                    <input type="text" id="ci_dealerLocation" placeholder="e.g. Doral, Miami">
+                                </div>
+                                <div class="info-field">
+                                    <label>Client Since</label>
+                                    <input type="date" id="ci_clientSince">
+                                </div>
+                                <div class="info-field">
+                                    <label>Referral Source</label>
+                                    <input type="text" id="ci_referral" placeholder="Walk-in, referral, web…">
+                                </div>
+                                <div class="info-field">
+                                    <label>Status</label>
+                                    <select id="ci_clientStatus">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="Prospect">Prospect</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-actions">
+                            <button class="btn-secondary" onclick="amsDiscardContact()"><i data-lucide="x"></i> Discard</button>
+                            <button class="btn-success"   onclick="amsSaveContact()"><i data-lucide="save"></i> Save Contact Info</button>
+                        </div>
+                    </div><!-- /tabContact -->
+
+                    <!-- ── TAB: Policies ── -->
+                    <div id="tabPolicies" style="display:none;">
+                        <div class="info-card" style="padding:0;overflow:hidden;">
+                            <div class="policy-toolbar" style="padding:16px 20px 12px;">
+                                <h3 style="border:none;padding:0;margin:0;"><i data-lucide="file-text"></i> Policy History</h3>
+                                <button class="btn-primary btn-sm" onclick="amsOpenAddPolicyModal()">
+                                    <i data-lucide="plus"></i> Add Policy
+                                </button>
+                            </div>
+                            <div class="policies-table-wrap" style="border:none;border-radius:0;box-shadow:none;">
+                                <table class="policies-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Agent</th>
+                                            <th>Policy Type</th>
+                                            <th>LOB</th>
+                                            <th>Carrier</th>
+                                            <th>Policy #</th>
+                                            <th>Binder #</th>
+                                            <th style="text-align:right;">Premium</th>
+                                            <th>Pmt Type</th>
+                                            <th>MGA</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="amsPoliciesBody">
+                                        <tr><td colspan="11" style="text-align:center;padding:32px;color:var(--gray-400);">No policies found.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div><!-- /tabPolicies -->
+
+                    <!-- ── TAB: Notes ── -->
+                    <div id="tabNotes" style="display:none;">
+                        <div class="info-card">
+                            <h3><i data-lucide="message-square"></i> Add Note</h3>
+                            <div class="add-note-area">
+                                <textarea id="amsNewNote" placeholder="Type a note about this client…"></textarea>
+                                <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+                                    <button class="btn-success btn-sm" onclick="amsSaveNote()">
+                                        <i data-lucide="save"></i> Save Note
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="amsNotesList"></div>
+                    </div><!-- /tabNotes -->
+
+                </div><!-- /amsClientDetail -->
+            </main><!-- /ams-main -->
+        </div><!-- /ams-body -->
+    </div><!-- /amsApp -->
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL: Add / Edit Policy
+    ════════════════════════════════════════════════════════════ -->
+    <div class="ams-modal" id="amsPolicyModal">
+        <div class="ams-modal-box">
+            <h3 id="amsPolicyModalTitle"><i data-lucide="file-plus"></i> Add Policy</h3>
+            <input type="hidden" id="amsPolicyEditId">
+            <div class="info-grid" style="gap:12px;">
+                <div class="info-field">
+                    <label>Agent <span style="color:var(--red)">*</span></label>
+                    <select id="mp_agent"></select>
+                </div>
+                <div class="info-field">
+                    <label>Policy Type <span style="color:var(--red)">*</span></label>
+                    <select id="mp_policyType">
+                        <option value="">— Select —</option>
+                        <option>New Business</option>
+                        <option>Renewal</option>
+                        <option>Endorsement</option>
+                        <option>Rewrite</option>
+                        <option>Cancellation</option>
+                    </select>
+                </div>
+                <div class="info-field">
+                    <label>Line of Business <span style="color:var(--red)">*</span></label>
+                    <select id="mp_lob"></select>
+                </div>
+                <div class="info-field">
+                    <label>Carrier <span style="color:var(--red)">*</span></label>
+                    <select id="mp_carrier"></select>
+                </div>
+                <div class="info-field">
+                    <label>MGA</label>
+                    <input type="text" id="mp_mga" placeholder="MGA name">
+                </div>
+                <div class="info-field">
+                    <label>Policy Number</label>
+                    <input type="text" id="mp_policyNum" placeholder="Policy number">
+                </div>
+                <div class="info-field">
+                    <label>Binder Number</label>
+                    <input type="text" id="mp_binderNum" placeholder="Binder number">
+                </div>
+                <div class="info-field">
+                    <label>Total Premium ($)</label>
+                    <input type="number" id="mp_premium" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="info-field">
+                    <label>Payment Type</label>
+                    <select id="mp_payType">
+                        <option value="">— Select —</option>
+                        <option>EFT</option>
+                        <option>Recurring Card Payment</option>
+                        <option>Direct Billing</option>
+                        <option>Monthly Paid</option>
+                        <option>Gross Paid</option>
+                        <option>Cash</option>
+                        <option>Check</option>
+                    </select>
+                </div>
+                <div class="info-field">
+                    <label>Effective Date</label>
+                    <input type="date" id="mp_effDate">
+                </div>
+                <div class="info-field">
+                    <label>Expiration Date</label>
+                    <input type="date" id="mp_expDate">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="amsClosePolicyModal()">Cancel</button>
+                <button class="btn-success"   onclick="amsSavePolicyModal()"><i data-lucide="save"></i> Save Policy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync banner -->
+    <div class="ams-sync-banner" id="amsSyncBanner">Saving…</div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="ams.js?v=20260522t"></script>
+</body>
+</html>
