@@ -1117,57 +1117,6 @@
                                 </label>
                                 <select id="company" required>
                                     <option value="">Select Company</option>
-                                    <option value="AIG">AIG</option>
-                                    <option value="Admiral">Admiral</option>
-                                    <option value="AmWins">AmWins</option>
-                                    <option value="American Tradition">American Tradition</option>
-                                    <option value="Ascendant">Ascendant</option>
-                                    <option value="Atunne">Atunne</option>
-                                    <option value="Avatar">Avatar</option>
-                                    <option value="Bristol West">Bristol West</option>
-                                    <option value="Brit Global">Brit Global</option>
-                                    <option value="Citizens">Citizens</option>
-                                    <option value="Edison">Edison</option>
-                                    <option value="FedNat">FedNat</option>
-                                    <option value="Florida Penninsula">Florida Penninsula</option>
-                                    <option value="Foremost Star">Foremost Star</option>
-                                    <option value="Gainsco">Gainsco</option>
-                                    <option value="Granada">Granada</option>
-                                    <option value="Grundy">Grundy</option>
-                                    <option value="Guard">Guard</option>
-                                    <option value="Hagerty">Hagerty</option>
-                                    <option value="Heritage">Heritage</option>
-                                    <option value="Hiscox">Hiscox</option>
-                                    <option value="Hudson">Hudson</option>
-                                    <option value="Imperial Flood">Imperial Flood</option>
-                                    <option value="Infinity">Infinity</option>
-                                    <option value="Johnson&Johnson">Johnson&Johnson</option>
-                                    <option value="Mercury">Mercury</option>
-                                    <option value="Monarch">Monarch</option>
-                                    <option value="Mount Vernon Fire">Mount Vernon Fire</option>
-                                    <option value="NICO">NICO</option>
-                                    <option value="National General">National General</option>
-                                    <option value="Next Insurance">Next Insurance</option>
-                                    <option value="Ocean Harbor">Ocean Harbor</option>
-                                    <option value="Peoples Trust">Peoples Trust</option>
-                                    <option value="ProPronto">ProPronto</option>
-                                    <option value="Progressive">Progressive</option>
-                                    <option value="Responssive Auto">Responssive Auto</option>
-                                    <option value="Scottdale">Scottdale</option>
-                                    <option value="Southern Oak">Southern Oak</option>
-                                    <option value="State National">State National</option>
-                                    <option value="Swifft">Swifft</option>
-                                    <option value="TYPTAP">TYPTAP</option>
-                                    <option value="The Hearth">The Hearth</option>
-                                    <option value="Tokio Marine">Tokio Marine</option>
-                                    <option value="UPC">UPC</option>
-                                    <option value="USLI">USLI</option>
-                                    <option value="United Auto">United Auto</option>
-                                    <option value="United Specialty">United Specialty</option>
-                                    <option value="Universal North">Universal North</option>
-                                    <option value="Universal P&C">Universal P&C</option>
-                                    <option value="Windhaven">Windhaven</option>
-                                    <option value="Wright Flood">Wright Flood</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1575,10 +1524,16 @@
                             <!-- Carrier -->
                             <div class="form-group">
                                 <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;">Carrier <span style="color:var(--danger);">*</span></label>
-                                <select id="uicManualCarrier" onchange="uicAutoCalcManualCommission()"
-                                    style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
-                                    <option value="">— Select Carrier —</option>
-                                </select>
+                                <div style="display:flex;gap:6px;align-items:center;">
+                                    <select id="uicManualCarrier" onchange="uicAutoCalcManualCommission()"
+                                        style="flex:1;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
+                                        <option value="">— Select Carrier —</option>
+                                    </select>
+                                    <button type="button" onclick="uicQuickAddCarrier()"
+                                        style="padding:7px 12px;background:var(--success);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px;font-weight:600;">
+                                        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Down Payment -->
@@ -1987,57 +1942,6 @@
                         <label>Insurance Company</label>
                         <select id="editCompany">
                             <option value="">Select Company</option>
-                            <option value="AIG">AIG</option>
-                            <option value="Admiral">Admiral</option>
-                            <option value="AmWins">AmWins</option>
-                            <option value="American Tradition">American Tradition</option>
-                            <option value="Ascendant">Ascendant</option>
-                            <option value="Atunne">Atunne</option>
-                            <option value="Avatar">Avatar</option>
-                            <option value="Bristol West">Bristol West</option>
-                            <option value="Brit Global">Brit Global</option>
-                            <option value="Citizens">Citizens</option>
-                            <option value="Edison">Edison</option>
-                            <option value="FedNat">FedNat</option>
-                            <option value="Florida Penninsula">Florida Penninsula</option>
-                            <option value="Foremost Star">Foremost Star</option>
-                            <option value="Gainsco">Gainsco</option>
-                            <option value="Granada">Granada</option>
-                            <option value="Grundy">Grundy</option>
-                            <option value="Guard">Guard</option>
-                            <option value="Hagerty">Hagerty</option>
-                            <option value="Heritage">Heritage</option>
-                            <option value="Hiscox">Hiscox</option>
-                            <option value="Hudson">Hudson</option>
-                            <option value="Imperial Flood">Imperial Flood</option>
-                            <option value="Infinity">Infinity</option>
-                            <option value="Johnson&amp;Johnson">Johnson&amp;Johnson</option>
-                            <option value="Mercury">Mercury</option>
-                            <option value="Monarch">Monarch</option>
-                            <option value="Mount Vernon Fire">Mount Vernon Fire</option>
-                            <option value="NICO">NICO</option>
-                            <option value="National General">National General</option>
-                            <option value="Next Insurance">Next Insurance</option>
-                            <option value="Ocean Harbor">Ocean Harbor</option>
-                            <option value="Peoples Trust">Peoples Trust</option>
-                            <option value="ProPronto">ProPronto</option>
-                            <option value="Progressive">Progressive</option>
-                            <option value="Responssive Auto">Responssive Auto</option>
-                            <option value="Scottdale">Scottdale</option>
-                            <option value="Southern Oak">Southern Oak</option>
-                            <option value="State National">State National</option>
-                            <option value="Swifft">Swifft</option>
-                            <option value="TYPTAP">TYPTAP</option>
-                            <option value="The Hearth">The Hearth</option>
-                            <option value="Tokio Marine">Tokio Marine</option>
-                            <option value="UPC">UPC</option>
-                            <option value="USLI">USLI</option>
-                            <option value="United Auto">United Auto</option>
-                            <option value="United Specialty">United Specialty</option>
-                            <option value="Universal North">Universal North</option>
-                            <option value="Universal P&amp;C">Universal P&amp;C</option>
-                            <option value="Windhaven">Windhaven</option>
-                            <option value="Wright Flood">Wright Flood</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -2552,7 +2456,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260521n"></script>
-    <script src="app.js?v=20260521n"></script>
+    <script src="motion.js?v=20260522a"></script>
+    <script src="app.js?v=20260522a"></script>
 </body>
 </html>

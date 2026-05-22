@@ -546,6 +546,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeCredentials();
     initializeCommissionData();
     initializeCarrierData();
+    refreshAllCarrierDropdowns();
     initializeAgentData();
     initializeCommissionStatements();
     setTodayDate();
@@ -1861,6 +1862,49 @@ function initializeCarrierData() {
     }
 }
 
+// ── Carrier Dropdown Sync ────────────────────────────────────────────────────
+// Rebuilds every carrier <select> across the whole app from carrierMasterData.
+// Call this after any carrier add / edit / delete.
+function refreshAllCarrierDropdowns() {
+    const carriers = Object.keys(carrierMasterData || {}).sort();
+    const targets = [
+        { id: 'company',         placeholder: 'Select Company' },
+        { id: 'editCompany',     placeholder: 'Select Company' },
+        { id: 'uicManualCarrier', placeholder: '— Select Carrier —' },
+    ];
+    targets.forEach(({ id, placeholder }) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>` +
+            carriers.map(c => `<option value="${c}"${c === prev ? ' selected' : ''}>${c}</option>`).join('');
+    });
+}
+
+// Quick-add carrier from the Manual Entry form "+" button
+function uicQuickAddCarrier() {
+    const name = prompt('Enter new carrier name:');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    const carriers = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
+    if (carriers[trimmed]) {
+        alert(`"${trimmed}" already exists in the carrier list.`);
+        return;
+    }
+    carriers[trimmed] = {
+        carrierName:     trimmed,
+        phoneNumbers:    ['', '', ''],
+        emails:          { underwriting: '', general: '', miscellaneous: '' },
+        commissionRules: JSON.parse(JSON.stringify(DEFAULT_COMMISSION_RULES))
+    };
+    localStorage.setItem('carrierMasterData', JSON.stringify(carriers));
+    carrierMasterData = carriers;
+    refreshAllCarrierDropdowns();
+    // Auto-select the new carrier in the manual entry form
+    const sel = document.getElementById('uicManualCarrier');
+    if (sel) { sel.value = trimmed; uicAutoCalcManualCommission(); }
+}
+
 // Password Management
 function showPasswordManagement() {
     document.getElementById('passwordManagementModal').classList.add('active');
@@ -2005,8 +2049,10 @@ function deleteCarrier(carrierName) {
     if (confirm(`Are you sure you want to delete "${carrierName}" and all its commission rules?`)) {
         const carriers = JSON.parse(localStorage.getItem('carrierMasterData')) || {};
         delete carriers[carrierName];
+        carrierMasterData = carriers;
         localStorage.setItem('carrierMasterData', JSON.stringify(carriers));
         loadCarrierList();
+        refreshAllCarrierDropdowns();
         alert(`Carrier "${carrierName}" deleted successfully`);
     }
 }
@@ -2103,6 +2149,7 @@ document.getElementById('carrierForm')?.addEventListener('submit', (e) => {
     alert(`Carrier "${carrierName}" saved successfully!`);
     closeAddEditCarrierModal();
     loadCarrierList();
+    refreshAllCarrierDropdowns();
 
     // Trigger recalculation of commissions for existing policies
     recalculateAllCommissions();
@@ -2854,11 +2901,8 @@ function openUICEntryPicker() {
         manualLOBSel.innerHTML = '<option value="">— Select LOB —</option>';
         ALL_LOBS.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; manualLOBSel.appendChild(o); });
     }
-    const manualCarrierSel = document.getElementById('uicManualCarrier');
-    if (manualCarrierSel) {
-        manualCarrierSel.innerHTML = '<option value="">— Select Carrier —</option>';
-        Object.keys(carrierMasterData).sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; manualCarrierSel.appendChild(o); });
-    }
+    // Carrier select — delegated to refreshAllCarrierDropdowns() for consistency
+    refreshAllCarrierDropdowns();
 
     // Reset manual form
     ['uicManualClientName','uicManualDownPmt','uicManualBasePrem','uicManualWrittenPrem','uicManualTerm','uicManualPolicyNum','uicManualRate','uicManualCommission']
