@@ -1468,7 +1468,7 @@ function loadAgentData() {
 function renderAgentTable(entries) {
     const tbody = document.getElementById('agentTable');
     if (entries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="no-data">No entries yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No entries yet</td></tr>';
         return;
     }
 
@@ -1479,8 +1479,9 @@ function renderAgentTable(entries) {
             <td>${entry.policyType}</td>
             <td>${entry.lineOfBusiness}</td>
             <td>${entry.company}</td>
+            <td>${entry.policyNumber || '-'}</td>
             <td>$${entry.totalPremium.toFixed(2)}</td>
-            <td>
+            <td style="white-space:nowrap;">
                 <button class="btn-primary btn-sm" onclick="openEditModal(${entry.id})"><i data-lucide="pencil"></i> Edit</button>
                 <button class="btn-danger btn-sm" onclick="deleteEntry(${entry.id})"><i data-lucide="trash-2"></i> Delete</button>
             </td>
@@ -1631,7 +1632,7 @@ function renderCharts() {
 function renderAdminTable(entries) {
     const tbody = document.getElementById('adminTable');
     if (entries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="no-data">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="no-data">No data available</td></tr>';
         return;
     }
 
@@ -1644,9 +1645,11 @@ function renderAdminTable(entries) {
             <td>${entry.lineOfBusiness}</td>
             <td>${entry.company}</td>
             <td>${entry.mga || '-'}</td>
+            <td>${entry.policyNumber || '-'}</td>
             <td>${entry.binderNumber}</td>
             <td>$${entry.totalPremium.toFixed(2)}</td>
-            <td>
+            <td style="white-space:nowrap;">
+                <button class="btn-primary btn-sm" onclick="openEditModal(${entry.id})" style="margin-right:4px;"><i data-lucide="pencil"></i> Edit</button>
                 <button class="btn-danger btn-sm" onclick="deleteEntry(${entry.id})"><i data-lucide="trash-2"></i> Delete</button>
             </td>
         </tr>
