@@ -557,6 +557,128 @@
         .success-message svg.lucide { width: 16px; height: 16px; vertical-align: -0.2em; }
         #syncBanner svg.lucide { width: 16px; height: 16px; vertical-align: middle; animation: spin 1.5s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ══════════════════════════════════════════════════════════
+           RESPONSIVE — MOBILE & TABLET
+           ══════════════════════════════════════════════════════════ */
+
+        /* ── Tablet (≤ 900px) ─────────────────────────────────── */
+        @media (max-width: 900px) {
+            .section.active { padding: 24px 24px; }
+            header { padding: 22px 24px 18px; }
+            header h1 { font-size: 1.55rem; }
+        }
+
+        /* ── Mobile (≤ 768px) ─────────────────────────────────── */
+        @media (max-width: 768px) {
+
+            /* Header */
+            header { padding: 18px 16px 14px; }
+            header h1 { font-size: 1.25rem; }
+            header p  { font-size: .78rem; }
+            .header-icon { height: 26px; }
+
+            /* Section padding */
+            .section.active { padding: 16px 12px; }
+
+            /* ── Login ── */
+            .login-container { margin: 20px auto; padding: 0 4px; }
+            .login-container h2 { font-size: 1.3rem; }
+
+            /* Login action grid: 2 cols instead of 3 */
+            div[style*="grid-template-columns:repeat(3,1fr)"],
+            div[style*="grid-template-columns: repeat(3, 1fr)"],
+            div[style*="grid-template-columns:repeat(3, 1fr)"] {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            /* Agent login grid: 2 cols */
+            .agent-list { grid-template-columns: repeat(2, 1fr); }
+            .agent-btn { padding: 14px 10px; font-size: 13px; }
+            .agent-btn .agent-avatar { width: 40px; height: 40px; font-size: 14px; }
+
+            /* ── Stat cards ── */
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 16px 12px; }
+            .stat-card .number { font-size: 20px; }
+            .stat-card h4 { font-size: 10px; }
+
+            /* ── Tables: enforce min-width so they scroll, never squish ── */
+            .table-container { -webkit-overflow-scrolling: touch; }
+            .table-container table { min-width: 780px; font-size: 12.5px; }
+            table thead th { padding: 10px 10px; font-size: 11.5px; }
+            table td { padding: 9px 10px; }
+
+            /* ── Filter bar ── */
+            .filter-section { flex-direction: column; gap: 10px; padding: 12px 14px; }
+            .filter-group input,
+            .filter-group select { min-width: 100%; }
+
+            /* ── Form grid ── */
+            .form-grid { grid-template-columns: 1fr; gap: 12px; }
+            .form-section { padding: 18px 14px; }
+
+            /* ── Modals ── */
+            .modal { padding: 12px 8px; }
+            .modal-content { padding: 20px 16px; max-width: 100%; border-radius: var(--radius-md); }
+            .modal-content.wide { max-width: 100% !important; }
+            .modal-actions { flex-direction: column; }
+            .modal-actions button { width: 100%; }
+
+            /* ── Footer buttons ── */
+            .footer-buttons { flex-direction: column; align-items: stretch; }
+            .footer-buttons button { width: 100%; }
+
+            /* ── User info bar ── */
+            .user-info { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .user-info-actions { width: 100%; }
+            .user-info-actions button { flex: 1; }
+
+            /* ── Form actions ── */
+            .form-actions { flex-direction: column; align-items: stretch; }
+            .form-actions button { width: 100%; }
+
+            /* ── Nav buttons ── */
+            .nav-buttons { gap: 6px; }
+            .nav-buttons button { font-size: 12px; padding: 8px 12px; }
+        }
+
+        /* ── Small phones (≤ 480px) ───────────────────────────── */
+        @media (max-width: 480px) {
+
+            header h1 { font-size: 1.05rem; }
+            header p  { font-size: .72rem; }
+            .header-icon { height: 22px; }
+
+            /* Login grid drops to single column */
+            div[style*="grid-template-columns:repeat(3,1fr)"],
+            div[style*="grid-template-columns: repeat(3, 1fr)"],
+            div[style*="grid-template-columns:repeat(3, 1fr)"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Agent login grid: single column */
+            .agent-list { grid-template-columns: repeat(2, 1fr); }
+
+            /* Stat cards single column */
+            .stats-grid { grid-template-columns: 1fr; }
+
+            /* Section padding tightest */
+            .section.active { padding: 12px 8px; }
+
+            /* Table stays scrollable */
+            .table-container table { min-width: 700px; font-size: 11.5px; }
+            table thead th { padding: 8px 8px; font-size: 11px; }
+            table td { padding: 7px 8px; }
+
+            /* Buttons full-width in action cells */
+            .action-buttons { flex-direction: column; gap: 4px; }
+            .action-buttons button { width: 100%; }
+
+            /* Modals */
+            .modal { padding: 8px 4px; }
+            .modal-content { padding: 16px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -2462,7 +2584,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260522q"></script>
-    <script src="app.js?v=20260522q"></script>
+    <script src="motion.js?v=20260522r"></script>
+    <script src="app.js?v=20260522r"></script>
 </body>
 </html>
