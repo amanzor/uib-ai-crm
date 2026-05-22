@@ -899,7 +899,7 @@ function saveEntry() {
 
     if (rate > 0) {
         const commission = calculateCommission(premium, rate);
-        const month = new Date(entry.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        const month = new Date(entry.entryDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
         const carrierType = paymentType === 'Monthly Paid' ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
 
         // Load current commission data
@@ -1816,8 +1816,11 @@ function exportToExcel() {
 
 // Utility Functions
 function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!dateStr) return '—';
+    // Append T12:00:00 so YYYY-MM-DD strings are parsed as local noon, not UTC
+    // midnight — prevents the date appearing one day earlier in ET/other western zones
+    const safe = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
+    return new Date(safe).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function clearAllData() {
@@ -2470,7 +2473,7 @@ function recalculateAllCommissions() {
         const paymentType = policy.paymentType || 'Monthly Paid';
         const policyType  = policy.policyType  || 'New';
         const month       = policy.entryDate
-            ? new Date(policy.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+            ? new Date(policy.entryDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
             : getMonthYear();
 
         if (!agent || !carrier || !lob || premium <= 0) return;
@@ -2697,7 +2700,7 @@ function deleteCommissionEntry(agent, carrierType, carrier, month) {
 function deleteAgentShareByMonth(agent, month) {
     if (!confirm(`Delete agent commission share for ${agent} — ${month}?`)) return;
     allData = allData.map(e => {
-        const entryMonth = new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        const entryMonth = new Date(e.entryDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
         if (e.agent === agent && entryMonth === month) return { ...e, agentCommissionShare: 0 };
         return e;
     });
@@ -3320,7 +3323,7 @@ function addSelectedUICEntries() {
         const policyType  = e.policyType  || 'New';
         const agent       = e.agent || (document.getElementById('uicExcelAgentAssign')?.value || '');
         const month       = e.entryDate
-            ? new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+            ? new Date(e.entryDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
             : getMonthYear();
 
         if (!agent || !carrier) { skipped++; return; }
@@ -3387,7 +3390,7 @@ function getAgentCommissionShares(agentName) {
     const entries = allData.filter(d => d.agent === agentName && d.agentCommissionShare > 0);
     const byMonth = {};
     entries.forEach(e => {
-        const month = new Date(e.entryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        const month = new Date(e.entryDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
         if (!byMonth[month]) byMonth[month] = { total: 0, agencyFeeTotal: 0, agencyCommissionTotal: 0, combinedTotal: 0, count: 0 };
         byMonth[month].total += e.agentCommissionShare;
         byMonth[month].agencyFeeTotal += e.agencyFee || 0;
