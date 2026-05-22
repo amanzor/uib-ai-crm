@@ -668,7 +668,7 @@ function autoCalculateCommission() {
             rateLabel.style.display = 'inline';
         }
         if (breakdown) {
-            breakdown.innerHTML = `💡 $${basePremium.toLocaleString()} × ${rate}% (${typeLabel}) = <strong>$${commission.toLocaleString()}</strong>`;
+            breakdown.innerHTML = `💡 $${basePremium.toLocaleString()} × ${rate}% × 50% (${typeLabel}) = <strong>$${commission.toLocaleString()}</strong>`;
             breakdown.style.display = 'block';
         }
 
@@ -2463,7 +2463,8 @@ function getCommissionRate(carrierName, lob, paymentType, policyType) {
 }
 
 function calculateCommission(premium, rate) {
-    return parseFloat((premium * (rate / 100)).toFixed(2));
+    // Commission = Base Premium × Carrier Rate% × 0.5
+    return parseFloat((premium * (rate / 100) * 0.5).toFixed(2));
 }
 
 function getMonthYear() {
@@ -2677,7 +2678,7 @@ function displayAllCommissions(commissions) {
 
     tbody.innerHTML = allCommissions.map(c => {
         const commissionDisplay = c.premium > 0 && c.rate > 0
-            ? `$${c.premium.toFixed(2)}×${c.rate}%=$${c.amount.toFixed(2)}`
+            ? `$${c.premium.toFixed(2)}×${c.rate}%×50%=$${c.amount.toFixed(2)}`
             : `$${c.amount.toFixed(2)}`;
         const deleteBtn = c.isAgentShare
             ? `<button class="btn-danger btn-sm" onclick="deleteAgentShareByMonth('${c.agent}','${c.month}')"><i data-lucide="trash-2"></i> Delete</button>`
@@ -3460,7 +3461,7 @@ function loadAgentCommissionData() {
                 const lob = typeof entry === 'object' ? entry.lob : '-';
                 const rate = typeof entry === 'object' ? entry.rate : 0;
                 const premium = typeof entry === 'object' ? entry.premium : 0;
-                const display = premium > 0 && rate > 0 ? `$${premium.toFixed(2)}×${rate}%=$${amount.toFixed(2)}` : `$${amount.toFixed(2)}`;
+                const display = premium > 0 && rate > 0 ? `$${premium.toFixed(2)}×${rate}%×50%=$${amount.toFixed(2)}` : `$${amount.toFixed(2)}`;
                 tableHTML += `<tr><td>${idx === 0 ? carrier : ''}</td><td>${lob}</td><td>${month}</td><td style="font-family: monospace; font-size: 0.95em;">${display}</td></tr>`;
             });
         });
