@@ -2906,7 +2906,7 @@ function loadUniversalInsCommissions() {
     // Render table
     const tbody = document.getElementById('uicTableBody');
     if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px;">No commission data found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:32px;">No commission data found.</td></tr>';
         document.getElementById('uicRowCount').textContent = '';
         return;
     }
@@ -2915,11 +2915,12 @@ function loadUniversalInsCommissions() {
     rows.sort((a, b) => a.agent.localeCompare(b.agent) || a.month.localeCompare(b.month) || a.carrier.localeCompare(b.carrier));
 
     tbody.innerHTML = rows.map((r, i) => {
+        const carrierTypeKey = r.type.includes('Monthly') ? 'monthlyPaidCommissionCarriers' : 'grossPaidCarriers';
         const breakdown = r.rate > 0
             ? `<span style="font-size:11px;color:var(--gray-400);display:block;">$${r.premium.toLocaleString('en-US',{minimumFractionDigits:2})} × ${r.rate}%</span>`
             : '';
         const bg = i % 2 === 0 ? '' : 'background:#f9fafb;';
-        return `<tr style="${bg}border-bottom:1px solid var(--gray-100);">
+        return `<tr data-agent="${encodeURIComponent(r.agent)}" data-carriertype="${carrierTypeKey}" data-carrier="${encodeURIComponent(r.carrier)}" data-month="${encodeURIComponent(r.month)}" style="${bg}border-bottom:1px solid var(--gray-100);">
             <td style="padding:10px 12px;font-weight:600;">${r.agent}</td>
             <td style="padding:10px 12px;font-size:13px;">${r.type}</td>
             <td style="padding:10px 12px;">${r.carrier}</td>
@@ -2928,6 +2929,11 @@ function loadUniversalInsCommissions() {
             <td style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;">
                 $${r.amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
                 ${breakdown}
+            </td>
+            <td style="padding:8px 10px;text-align:center;">
+                <button onclick="uicOpenCommEdit(this)"
+                    style="padding:4px 10px;background:linear-gradient(to right,#1539a8,#2563eb);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;"
+                    title="Edit this entry">✏️ Edit</button>
             </td>
         </tr>`;
     }).join('');
@@ -2942,6 +2948,126 @@ function resetUICFilters() {
     const m = document.getElementById('uicMonthFilter');
     if (a) a.value = '';
     if (m) m.value = '';
+    loadUniversalInsCommissions();
+}
+
+// ── UIC Commission Row Editing ─────────────────────────────────
+function uicOpenCommEdit(btn) {
+    const tr = btn.closest('tr');
+    const agent       = decodeURIComponent(tr.dataset.agent);
+    const carrierType = tr.dataset.carriertype;
+    const carrier     = decodeURIComponent(tr.dataset.carrier);
+    const month       = decodeURIComponent(tr.dataset.month);
+
+    const commData = JSON.parse(localStorage.getItem('commissionData')) || {};
+    const raw = commData[agent]?.[carrierType]?.[carrier]?.[month];
+    if (raw === undefined) return;
+
+    const entry   = typeof raw === 'object' ? raw : { amount: raw };
+    const amount  = entry.amount  ?? 0;
+    const lob     = entry.lob     ?? '';
+    const rate    = entry.rate    ?? '';
+    const premium = entry.premium ?? '';
+
+    tr.style.background = '#fffbeb';
+    const s = 'font-size:12px;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;box-sizing:border-box;';
+    const isMonthly = carrierType === 'monthlyPaidCommissionCarriers';
+
+    tr.innerHTML = `
+        <td style="padding:6px 10px;font-weight:600;font-size:13px;white-space:nowrap;">${agent}</td>
+        <td style="padding:4px 6px;">
+            <select id="uicCE_type" style="${s}width:138px;">
+                <option value="monthlyPaidCommissionCarriers" ${isMonthly?'selected':''}>📅 Monthly Paid</option>
+                <option value="grossPaidCarriers"             ${!isMonthly?'selected':''}>💰 Gross Paid</option>
+            </select>
+        </td>
+        <td style="padding:4px 6px;"><input id="uicCE_carrier" type="text" value="${carrier.replace(/"/g,'&quot;')}" style="${s}width:130px;"></td>
+        <td style="padding:4px 6px;"><input id="uicCE_lob"     type="text" value="${lob.replace(/"/g,'&quot;')}"     style="${s}width:120px;"></td>
+        <td style="padding:4px 6px;"><input id="uicCE_month"   type="text" value="${month}"                          style="${s}width:110px;"></td>
+        <td style="padding:4px 6px;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;align-items:center;gap:5px;">
+                    <span style="font-size:11px;color:var(--gray-500);width:42px;">$ comm</span>
+                    <input id="uicCE_amount" type="number" step="0.01" value="${amount}"  style="${s}width:90px;background:#f0fdf4;font-weight:700;color:#166534;text-align:right;">
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;">
+                    <span style="font-size:11px;color:var(--gray-500);width:42px;">$ prem</span>
+                    <input id="uicCE_prem"   type="number" step="0.01" value="${premium}" style="${s}width:90px;text-align:right;">
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;">
+                    <span style="font-size:11px;color:var(--gray-500);width:42px;">rate %</span>
+                    <input id="uicCE_rate"   type="number" step="0.01" value="${rate}"    style="${s}width:90px;text-align:right;" placeholder="e.g. 10">
+                </div>
+            </div>
+        </td>
+        <td style="padding:4px 8px;text-align:center;vertical-align:middle;">
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+                <button onclick="uicSaveCommEdit(this)"
+                    style="padding:5px 12px;background:linear-gradient(to right,#047857,#10b981);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;width:80px;">✓ Save</button>
+                <button onclick="loadUniversalInsCommissions()"
+                    style="padding:5px 12px;background:linear-gradient(to right,#475569,#94a3b8);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;width:80px;">✗ Cancel</button>
+                <button onclick="uicDeleteCommEntry(this)"
+                    style="padding:5px 12px;background:linear-gradient(to right,#7f1010,#ef4444);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;width:80px;">🗑 Delete</button>
+            </div>
+        </td>`;
+}
+
+function uicSaveCommEdit(btn) {
+    const tr          = btn.closest('tr');
+    const oldAgent    = decodeURIComponent(tr.dataset.agent);
+    const oldCT       = tr.dataset.carriertype;
+    const oldCarrier  = decodeURIComponent(tr.dataset.carrier);
+    const oldMonth    = decodeURIComponent(tr.dataset.month);
+
+    const g = id => document.getElementById(id);
+    const newCT      = g('uicCE_type')?.value    || oldCT;
+    const newCarrier = (g('uicCE_carrier')?.value || '').trim() || oldCarrier;
+    const newLOB     = (g('uicCE_lob')?.value    || '').trim();
+    const newMonth   = (g('uicCE_month')?.value  || '').trim()  || oldMonth;
+    const newAmount  = parseFloat(g('uicCE_amount')?.value) || 0;
+    const newPrem    = parseFloat(g('uicCE_prem')?.value)   || 0;
+    const newRate    = parseFloat(g('uicCE_rate')?.value)   || 0;
+
+    let cd = JSON.parse(localStorage.getItem('commissionData')) || {};
+
+    // Remove old entry, clean up empty containers
+    if (cd[oldAgent]?.[oldCT]?.[oldCarrier]) {
+        delete cd[oldAgent][oldCT][oldCarrier][oldMonth];
+        if (!Object.keys(cd[oldAgent][oldCT][oldCarrier]).length) delete cd[oldAgent][oldCT][oldCarrier];
+        if (!Object.keys(cd[oldAgent][oldCT] || {}).length)       delete cd[oldAgent][oldCT];
+    }
+
+    // Write new entry
+    cd[oldAgent]                      ??= {};
+    cd[oldAgent][newCT]               ??= {};
+    cd[oldAgent][newCT][newCarrier]   ??= {};
+    cd[oldAgent][newCT][newCarrier][newMonth] = {
+        amount: newAmount, lob: newLOB, rate: newRate, premium: newPrem
+    };
+
+    localStorage.setItem('commissionData', JSON.stringify(cd));
+    commissionData = cd;
+    loadUniversalInsCommissions();
+}
+
+function uicDeleteCommEntry(btn) {
+    const tr         = btn.closest('tr');
+    const agent      = decodeURIComponent(tr.dataset.agent);
+    const carrierType= tr.dataset.carriertype;
+    const carrier    = decodeURIComponent(tr.dataset.carrier);
+    const month      = decodeURIComponent(tr.dataset.month);
+
+    if (!confirm(`Delete commission entry?\n\nAgent: ${agent}\nCarrier: ${carrier}\nMonth: ${month}\n\nThis cannot be undone.`)) return;
+
+    let cd = JSON.parse(localStorage.getItem('commissionData')) || {};
+    if (cd[agent]?.[carrierType]?.[carrier]) {
+        delete cd[agent][carrierType][carrier][month];
+        if (!Object.keys(cd[agent][carrierType][carrier]).length) delete cd[agent][carrierType][carrier];
+        if (!Object.keys(cd[agent][carrierType] || {}).length)    delete cd[agent][carrierType];
+        if (!Object.keys(cd[agent] || {}).length)                 delete cd[agent];
+    }
+    localStorage.setItem('commissionData', JSON.stringify(cd));
+    commissionData = cd;
     loadUniversalInsCommissions();
 }
 
