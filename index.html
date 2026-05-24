@@ -135,47 +135,55 @@
         button:focus-visible { outline: 3px solid rgba(37,99,235,.5); outline-offset: 2px; }
 
         .btn-primary {
-            background: var(--blue);
+            background: linear-gradient(135deg, #1539a8 0%, #1d4ed8 55%, #3b82f6 100%);
             color: white;
-            box-shadow: 0 1px 3px rgba(29,78,216,.3), inset 0 1px 0 rgba(255,255,255,.12);
+            box-shadow: 0 1px 3px rgba(29,78,216,.35), 0 1px 8px rgba(29,78,216,.18), inset 0 1px 0 rgba(255,255,255,.15);
         }
-        .btn-primary:hover  { background:#1a44c0; box-shadow:0 4px 12px rgba(29,78,216,.4); transform:translateY(-1px); }
-        .btn-primary:active { transform:translateY(0); box-shadow:none; }
+        .btn-primary:hover  { background:linear-gradient(135deg,#1232a0 0%,#1a44c0 55%,#2563eb 100%); box-shadow:0 4px 14px rgba(29,78,216,.45); transform:translateY(-1px); }
+        .btn-primary:active { transform:translateY(0); box-shadow:0 1px 3px rgba(29,78,216,.3); }
 
         .btn-secondary {
-            background: var(--gray-100);
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e8eef6 100%);
             color: var(--gray-700);
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 6px rgba(0,0,0,.05), inset 0 1px 0 rgba(255,255,255,.9);
             border: 1px solid var(--gray-200);
         }
-        .btn-secondary:hover  { background:var(--gray-200); transform:translateY(-1px); }
-        .btn-secondary:active { transform:translateY(0); }
+        .btn-secondary:hover  { background:linear-gradient(135deg,#f1f5f9 0%,#e2e8f0 50%,#d4dde8 100%); box-shadow:0 4px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
+        .btn-secondary:active { transform:translateY(0); box-shadow:0 1px 2px rgba(0,0,0,.08); }
 
         .btn-success {
-            background: var(--green);
+            background: linear-gradient(135deg, #047857 0%, #059669 55%, #10b981 100%);
             color: white;
-            box-shadow: 0 1px 3px rgba(5,150,105,.3), inset 0 1px 0 rgba(255,255,255,.12);
+            box-shadow: 0 1px 3px rgba(5,150,105,.35), 0 1px 8px rgba(5,150,105,.18), inset 0 1px 0 rgba(255,255,255,.15);
         }
-        .btn-success:hover  { background:#047857; box-shadow:0 4px 12px rgba(5,150,105,.4); transform:translateY(-1px); }
-        .btn-success:active { transform:translateY(0); box-shadow:none; }
+        .btn-success:hover  { background:linear-gradient(135deg,#065f46 0%,#047857 55%,#059669 100%); box-shadow:0 4px 14px rgba(5,150,105,.45); transform:translateY(-1px); }
+        .btn-success:active { transform:translateY(0); box-shadow:0 1px 3px rgba(5,150,105,.3); }
 
         .btn-danger {
-            background: var(--red);
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 55%, #f87171 100%);
             color: white;
-            box-shadow: 0 1px 3px rgba(220,38,38,.3), inset 0 1px 0 rgba(255,255,255,.12);
+            box-shadow: 0 1px 3px rgba(220,38,38,.35), 0 1px 8px rgba(220,38,38,.18), inset 0 1px 0 rgba(255,255,255,.15);
         }
-        .btn-danger:hover  { background:#b91c1c; box-shadow:0 4px 12px rgba(220,38,38,.4); transform:translateY(-1px); }
-        .btn-danger:active { transform:translateY(0); box-shadow:none; }
+        .btn-danger:hover  { background:linear-gradient(135deg,#991b1b 0%,#b91c1c 55%,#dc2626 100%); box-shadow:0 4px 14px rgba(220,38,38,.45); transform:translateY(-1px); }
+        .btn-danger:active { transform:translateY(0); box-shadow:0 1px 3px rgba(220,38,38,.3); }
 
         .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
 
         .btn-purple {
-            background: var(--purple);
+            background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 55%, #a78bfa 100%);
             color: white;
-            box-shadow: 0 1px 3px rgba(124,58,237,.3), inset 0 1px 0 rgba(255,255,255,.12);
+            box-shadow: 0 1px 3px rgba(124,58,237,.35), 0 1px 8px rgba(124,58,237,.18), inset 0 1px 0 rgba(255,255,255,.15);
         }
-        .btn-purple:hover  { background:#6d28d9; box-shadow:0 4px 12px rgba(124,58,237,.4); transform:translateY(-1px); }
-        .btn-purple:active { transform:translateY(0); box-shadow:none; }
+        .btn-purple:hover  { background:linear-gradient(135deg,#5b21b6 0%,#6d28d9 55%,#7c3aed 100%); box-shadow:0 4px 14px rgba(124,58,237,.45); transform:translateY(-1px); }
+        .btn-purple:active { transform:translateY(0); box-shadow:0 1px 3px rgba(124,58,237,.3); }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #b45309 0%, #d97706 55%, #fbbf24 100%);
+            color: white;
+            box-shadow: 0 1px 3px rgba(217,119,6,.35), 0 1px 8px rgba(217,119,6,.18), inset 0 1px 0 rgba(255,255,255,.15);
+        }
+        .btn-warning:hover  { background:linear-gradient(135deg,#92400e 0%,#b45309 55%,#d97706 100%); box-shadow:0 4px 14px rgba(217,119,6,.45); transform:translateY(-1px); }
+        .btn-warning:active { transform:translateY(0); box-shadow:0 1px 3px rgba(217,119,6,.3); }
 
         /* ── LOB Multi-Select ───────────────────────────────────── */
         .lob-multiselect { position:relative; width:100%; display:block; }
@@ -744,7 +752,7 @@
 
                     <!-- Universal Ins Commissions Button -->
                     <div style="margin-top:12px;max-width:720px;margin-left:auto;margin-right:auto;">
-                        <button class="btn-warning login-action-btn" style="width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:700;letter-spacing:0.3px;" onclick="showUniversalInsCommissions()">
+                        <button class="btn-warning login-action-btn" style="width:100%;font-weight:700;letter-spacing:0.3px;" onclick="showUniversalInsCommissions()">
                             <i data-lucide="dollar-sign"></i> Universal Commission's Consolidation
                         </button>
                     </div>
@@ -2118,7 +2126,7 @@
                     <button class="btn-primary" onclick="openCredentialManager()"><i data-lucide="key"></i> Credentials</button>
                     <button class="btn-primary" style="background:linear-gradient(135deg,#0d1f3c,#1d4ed8);" onclick="window.open('ams.html','_blank')"><i data-lucide="building-2"></i> AMS</button>
                     <button class="btn-success" onclick="showProductionDashboard()"><i data-lucide="bar-chart-2"></i> Production Dashboard</button>
-                    <button class="btn-warning" onclick="importJorgeCastroData()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;" title="Import all Jorge Castro entries from the Doral commission spreadsheet">
+                    <button class="btn-warning" onclick="importJorgeCastroData()" title="Import all Jorge Castro entries from the Doral commission spreadsheet">
                         <i data-lucide="upload"></i> Import Jorge Castro
                     </button>
                     <button class="btn-danger" onclick="logout()"><i data-lucide="log-out"></i> Logout</button>
@@ -2811,7 +2819,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260522y"></script>
-    <script src="app.js?v=20260522y"></script>
+    <script src="motion.js?v=20260524a"></script>
+    <script src="app.js?v=20260524a"></script>
 </body>
 </html>
