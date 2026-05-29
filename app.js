@@ -2678,6 +2678,58 @@ function getMonthYear() {
     return getEasternMonthYear();
 }
 
+// ── Retroactive Commission Recalculation ─────────────────────────────────────
+async function recalculateAllBinderCommissions() {
+    const total = allData.length;
+    if (!confirm(
+        `Recalculate commissions for ALL ${total.toLocaleString()} entries?\n\n` +
+        `• Agency Commission = Carrier Rule % × Base Premium\n` +
+        `• Agent Commission  = (Agency Fee + Agency Commission) × 50%\n` +
+        `• Entries with no matching carrier rule will be skipped\n\n` +
+        `Click OK to proceed.`
+    )) return;
+
+    let updated = 0, skipped = 0;
+
+    const newData = allData.map(e => {
+        const premium     = parseFloat(e.basePremium || e.totalPremium) || 0;
+        const carrier     = e.company      || '';
+        const lob         = e.lineOfBusiness || '';
+        const paymentType = e.paymentType  || 'Monthly Paid';
+        const policyType  = e.policyType   || 'New';
+        const agencyFee   = parseFloat(e.agencyFee) || 0;
+
+        if (premium <= 0 || !carrier || !lob || !paymentType) { skipped++; return e; }
+
+        const rate = getCommissionRate(carrier, lob, paymentType, policyType);
+        if (rate <= 0) { skipped++; return e; }
+
+        const agencyComm  = parseFloat((premium * (rate / 100)).toFixed(2));
+        const agentShare  = parseFloat(((agencyFee + agencyComm) * 0.5).toFixed(2));
+        updated++;
+        return { ...e, agencyCommission: agencyComm, agentCommissionShare: agentShare };
+    });
+
+    allData = newData;
+    localStorage.setItem('binderData', JSON.stringify(newData));
+    driveSet('binderData', newData);
+
+    // Also rebuild commissionData dashboard store
+    recalculateAllCommissions();
+
+    // Refresh views
+    if (typeof loadAdminData      === 'function') loadAdminData();
+    if (typeof loadAgentData      === 'function') loadAgentData();
+    if (typeof apdInit            === 'function') apdInit();
+
+    alert(
+        `✅ Recalculation complete!\n\n` +
+        `• ${updated.toLocaleString()} entries updated\n` +
+        `• ${skipped.toLocaleString()} entries skipped (no matching carrier rule)\n` +
+        `• Total entries: ${total.toLocaleString()}`
+    );
+}
+
 function recalculateAllCommissions() {
     const allPolicies = JSON.parse(localStorage.getItem('binderData')) || [];
 
