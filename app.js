@@ -1684,6 +1684,28 @@ function resetAgentFilter() {
 
 // Admin Dashboard
 function loadAdminDashboard() {
+    // One-time migration: set all Uriel Rendon entries to Gross Paid
+    if (!localStorage.getItem('migration_uriel_gross_paid')) {
+        const before = allData.length;
+        let changed = 0;
+        allData = allData.map(e => {
+            if (e.agent !== 'Uriel Rendon') return e;
+            const premium   = parseFloat(e.basePremium || e.totalPremium) || 0;
+            const agencyFee = parseFloat(e.agencyFee) || 0;
+            const rate      = getCommissionRate(e.company, e.lineOfBusiness, 'Gross Paid', e.policyType || 'New');
+            const agencyComm = rate > 0 ? parseFloat((premium * (rate / 100)).toFixed(2)) : (e.agencyCommission || 0);
+            const agentShare = parseFloat(((agencyFee + agencyComm) * 0.5).toFixed(2));
+            changed++;
+            return { ...e, paymentType: 'Gross Paid', agencyCommission: agencyComm, agentCommissionShare: agentShare };
+        });
+        if (changed > 0) {
+            localStorage.setItem('binderData', JSON.stringify(allData));
+            driveSet('binderData', allData);
+            recalculateAllCommissions();
+        }
+        localStorage.setItem('migration_uriel_gross_paid', '1');
+    }
+
     populateAgentFilter();
     renderAdminStats();
     renderCharts();
