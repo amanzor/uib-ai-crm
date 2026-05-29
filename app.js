@@ -4362,8 +4362,11 @@ function showProductionDashboard() {
     // Refresh allData from localStorage in case it was updated
     allData = JSON.parse(localStorage.getItem('binderData')) || [];
 
-    // Populate Agent filter
-    const agents = [...new Set(allData.map(d => d.agent).filter(Boolean))].sort();
+    // Populate Agent filter — merge from data + registered agents
+    const agentsFromData = allData.map(d => d.agent).filter(Boolean);
+    const masterAgents   = Object.keys(JSON.parse(localStorage.getItem('agentMasterData'))  || {});
+    const credAgents     = Object.keys(JSON.parse(localStorage.getItem('agentCredentials')) || {});
+    const agents = [...new Set([...agentsFromData, ...masterAgents, ...credAgents])].sort();
     const agentSel = document.getElementById('prodAgentFilter');
     if (agentSel) agentSel.innerHTML =
         '<option value="">All Agents</option>' +
@@ -5100,7 +5103,7 @@ async function importBinderMay26Data() {
     const confirmed = confirm(
         'Import Binder Book May 26 entries?\n\n' +
         '• 40 policy entries (May 2026)\n' +
-        '• Agents: Uri Rendon, Lazaro Reigosa Cruz, Amanda Montano, Randy Diaz\n' +
+        '• Agents: Uriel Rendon, Lazaro Reigosa Cruz, Amanda Montano, Randy Diaz\n' +
         '• Personal Auto, Commercial, and other lines\n' +
         '• Existing entries with matching IDs will be skipped (safe to re-run)\n\n' +
         'Click OK to proceed.'
