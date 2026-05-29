@@ -1449,6 +1449,7 @@ function selectLocationAndOpenSales(location) {
     setTodayDate();
     generateBinderNumber();
     refreshAllCarrierDropdowns(); // ensure newly added carriers are present
+    populateSourceDropdown('source', ''); // load default + custom sources
     const m = document.getElementById('dailySalesModal');
     m.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(m);
@@ -1459,6 +1460,67 @@ function closeDailySalesModal() {
     _selectedSalesLocation = '';
     document.getElementById('salesLocationDisplay').textContent = '—';
     clientLookupClear();
+}
+
+// ── Source Dropdown Management ───────────────────────────────────────────────
+const DEFAULT_SOURCES = ['Referral','Walk-In','Online','Phone','Repeat Client','Social Media','Agent Referral','Other'];
+
+function getCustomSources() {
+    try { return JSON.parse(localStorage.getItem('customSources')) || []; } catch(e) { return []; }
+}
+
+function saveCustomSources(arr) {
+    localStorage.setItem('customSources', JSON.stringify(arr));
+}
+
+function populateSourceDropdown(selectId, selectedValue) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const all = [...DEFAULT_SOURCES, ...getCustomSources().filter(s => !DEFAULT_SOURCES.includes(s))];
+    sel.innerHTML = '<option value="">Select Source</option>' +
+        all.map(s => `<option value="${s}"${s===selectedValue?' selected':''}>${s}</option>`).join('') +
+        '<option value="__add_new__">＋ Add New Source…</option>';
+}
+
+function sourceDropdownChanged(sel) {
+    if (sel.value === '__add_new__') {
+        sel.value = '';
+        openAddSourceModal();
+    }
+}
+
+function openAddSourceModal() {
+    const row = document.getElementById('newSourceRow');
+    const inp = document.getElementById('newSourceInput');
+    if (row) { row.style.display = 'block'; }
+    if (inp) { inp.value = ''; inp.focus(); }
+}
+
+function cancelNewSource() {
+    const row = document.getElementById('newSourceRow');
+    if (row) row.style.display = 'none';
+}
+
+function saveNewSource() {
+    const inp = document.getElementById('newSourceInput');
+    const val = (inp?.value || '').trim();
+    if (!val) { inp?.focus(); return; }
+
+    const customs = getCustomSources();
+    const all = [...DEFAULT_SOURCES, ...customs];
+    if (all.map(s => s.toLowerCase()).includes(val.toLowerCase())) {
+        // Already exists — just select it
+        populateSourceDropdown('source', val);
+        document.getElementById('source').value = val;
+        cancelNewSource();
+        return;
+    }
+
+    customs.push(val);
+    saveCustomSources(customs);
+    populateSourceDropdown('source', val);
+    document.getElementById('source').value = val;
+    cancelNewSource();
 }
 
 // ── Client Lookup Search ──────────────────────────────────────────────────────

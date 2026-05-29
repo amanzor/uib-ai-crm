@@ -1246,17 +1246,21 @@
                             </div>
                             <div class="form-group">
                                 <label>Source *</label>
-                                <select id="source" required>
-                                    <option value="">Select Source</option>
-                                    <option value="Referral">Referral</option>
-                                    <option value="Walk-In">Walk-In</option>
-                                    <option value="Online">Online</option>
-                                    <option value="Phone">Phone</option>
-                                    <option value="Repeat Client">Repeat Client</option>
-                                    <option value="Social Media">Social Media</option>
-                                    <option value="Agent Referral">Agent Referral</option>
-                                    <option value="Other">Other</option>
-                                </select>
+                                <div style="display:flex;gap:6px;align-items:center;">
+                                    <select id="source" required onchange="sourceDropdownChanged(this)" style="flex:1;"></select>
+                                    <button type="button" onclick="openAddSourceModal()" title="Add new source"
+                                        style="flex-shrink:0;padding:7px 10px;background:linear-gradient(to right,#0f2a78,#2563eb);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;" >＋</button>
+                                </div>
+                                <!-- inline new-source input (hidden by default) -->
+                                <div id="newSourceRow" style="display:none;margin-top:6px;display:none;">
+                                    <input type="text" id="newSourceInput" placeholder="Type new source name…"
+                                        style="width:100%;padding:7px 10px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewSource();}">
+                                    <div style="display:flex;gap:6px;margin-top:5px;">
+                                        <button type="button" onclick="saveNewSource()" class="btn-primary btn-sm" style="flex:1;">✓ Save Source</button>
+                                        <button type="button" onclick="cancelNewSource()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Referred By *</label>
@@ -2857,7 +2861,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260524h"></script>
-    <script src="app.js?v=20260524h"></script>
+    <script src="motion.js?v=20260524i"></script>
+    <script src="app.js?v=20260524i"></script>
 </body>
 </html>
