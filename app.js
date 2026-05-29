@@ -599,13 +599,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeCommissionStatements();
     setTodayDate();
 
-    // Agency Commission = 10% of Base Premium (auto, readonly)
-    // Agent Commission  = 50% of (Agency Fee + Agency Commission)
-    // Either basePremium or agencyFee changes triggers full recalc
-    ['basePremium', 'agencyFee'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', autoCalculateCommission);
+    // Agency Commission = Carrier Rate % × Base Premium (auto, readonly)
+    // Agent Commission  = (Agency Fee + Agency Commission) × 50% (auto, readonly)
+    ['basePremium', 'company', 'lineOfBusiness', 'paymentType', 'policyType'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input',  autoCalculateCommission);
         document.getElementById(id)?.addEventListener('change', autoCalculateCommission);
     });
+    // Agency Fee is editable — changing it re-runs the agent share only
+    document.getElementById('agencyFee')?.addEventListener('input',  calculateAgentCommission);
+    document.getElementById('agencyFee')?.addEventListener('change', calculateAgentCommission);
 
     // Render Lucide icons in static HTML
     refreshIcons();
@@ -627,8 +629,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function calculateAgentCommission() {
-    const fee = parseFloat(document.getElementById('agencyFee').value) || 0;
-    const commission = parseFloat(document.getElementById('agencyCommission').value) || 0;
+    const fee        = parseFloat(document.getElementById('agencyFee')?.value) || 0;
+    const commission = parseFloat(document.getElementById('agencyCommission')?.value) || 0;
     const agentShare = parseFloat(((fee + commission) * 0.5).toFixed(2));
     const field = document.getElementById('agentCommission');
     if (field) field.value = agentShare > 0 ? agentShare : '';
@@ -636,27 +638,38 @@ function calculateAgentCommission() {
 
 function autoCalculateCommission() {
     const basePremium = parseFloat(document.getElementById('basePremium')?.value) || 0;
-    const rateLabel   = document.getElementById('commissionRateLabel');
+    const carrier     = document.getElementById('company')?.value;
+    const lob         = document.getElementById('lineOfBusiness')?.value;
+    const paymentType = document.getElementById('paymentType')?.value;
+    const policyType  = document.getElementById('policyType')?.value;
     const breakdown   = document.getElementById('commissionBreakdown');
     const commField   = document.getElementById('agencyCommission');
 
-    if (basePremium <= 0) {
-        if (commField)  commField.value = '';
-        if (rateLabel)  { rateLabel.style.display = 'none'; rateLabel.textContent = ''; }
-        if (breakdown)  { breakdown.style.display = 'none'; breakdown.textContent = ''; }
+    if (basePremium <= 0 || !carrier || !lob || !paymentType) {
+        if (commField) commField.value = '';
+        if (breakdown) { breakdown.style.display = 'none'; breakdown.textContent = ''; }
         calculateAgentCommission();
         return;
     }
 
-    // Agency Commission = 10% of Base Premium
-    const agencyComm = parseFloat((basePremium * 0.10).toFixed(2));
-    if (commField) commField.value = agencyComm;
+    const rate = getCommissionRate(carrier, lob, paymentType, policyType);
 
-    if (rateLabel) { rateLabel.style.display = 'none'; }
+    if (rate > 0) {
+        const agencyComm = parseFloat((basePremium * (rate / 100)).toFixed(2));
+        if (commField) commField.value = agencyComm;
 
-    if (breakdown) {
-        breakdown.innerHTML = `🔒 $${basePremium.toLocaleString()} × 10% = <strong>$${agencyComm.toLocaleString()}</strong>`;
-        breakdown.style.display = 'block';
+        if (breakdown) {
+            breakdown.innerHTML = `🔒 $${basePremium.toLocaleString()} × ${rate}% = <strong>$${agencyComm.toLocaleString()}</strong>`;
+            breakdown.style.display = 'block';
+        }
+    } else {
+        if (commField) commField.value = '';
+        if (breakdown) {
+            breakdown.innerHTML = `⚠️ No commission rule found for this carrier / LOB / payment type`;
+            breakdown.style.display = 'block';
+            breakdown.style.color = '#92400e';
+            breakdown.style.background = '#fef3c7';
+        }
     }
 
     calculateAgentCommission();
