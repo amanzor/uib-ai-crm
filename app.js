@@ -599,8 +599,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeCommissionStatements();
     setTodayDate();
 
-    ['agencyFee', 'agencyCommission'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', calculateAgentCommission);
+    // agencyFee changes still trigger recalculation; agencyCommission is now readonly
+    document.getElementById('agencyFee')?.addEventListener('input', () => {
+        autoCalculateCommission();
+        calculateAgentCommission();
     });
 
     // Auto-calculate carrier commission when key fields change
@@ -670,8 +672,8 @@ function autoCalculateCommission() {
             rateLabel.style.display = 'inline';
         }
         if (breakdown) {
-            const feeStr = agencyFee > 0 ? ` + $${agencyFee.toLocaleString()}` : '';
-            breakdown.innerHTML = `💡 ($${basePremium.toLocaleString()} × ${rate}%${feeStr}) × 50% = <strong>$${commission.toLocaleString()}</strong>`;
+            const feeStr = agencyFee > 0 ? ` + $${agencyFee.toLocaleString()} agency fee` : '';
+            breakdown.innerHTML = `🔒 $${basePremium.toLocaleString()} × ${rate}%${feeStr} = <strong>$${commission.toLocaleString()}</strong>`;
             breakdown.style.display = 'block';
         }
 
@@ -1460,6 +1462,15 @@ function closeDailySalesModal() {
     _selectedSalesLocation = '';
     document.getElementById('salesLocationDisplay').textContent = '—';
     clientLookupClear();
+    // Clear auto-calculated commission display
+    const comm = document.getElementById('agencyCommission');
+    const agent = document.getElementById('agentCommission');
+    const label = document.getElementById('commissionRateLabel');
+    const breakdown = document.getElementById('commissionBreakdown');
+    if (comm) comm.value = '';
+    if (agent) agent.value = '';
+    if (label) { label.style.display = 'none'; label.textContent = ''; }
+    if (breakdown) { breakdown.style.display = 'none'; breakdown.textContent = ''; }
 }
 
 // ── Source Dropdown Management ───────────────────────────────────────────────
