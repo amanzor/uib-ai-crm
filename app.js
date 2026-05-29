@@ -2678,6 +2678,37 @@ function getMonthYear() {
     return getEasternMonthYear();
 }
 
+// ── Agent Payment Type Patch ──────────────────────────────────────────────────
+function setAgentPaymentType(agentName, paymentType) {
+    const total   = allData.length;
+    const matches = allData.filter(e => e.agent === agentName).length;
+    if (matches === 0) { alert(`No entries found for agent: ${agentName}`); return; }
+
+    if (!confirm(
+        `Set ALL ${matches.toLocaleString()} entries for "${agentName}" to ${paymentType}?\n\n` +
+        `Commissions will be recalculated after the update.\n\nClick OK to proceed.`
+    )) return;
+
+    allData = allData.map(e => {
+        if (e.agent !== agentName) return e;
+        const premium  = parseFloat(e.basePremium || e.totalPremium) || 0;
+        const agencyFee= parseFloat(e.agencyFee) || 0;
+        const rate     = getCommissionRate(e.company, e.lineOfBusiness, paymentType, e.policyType || 'New');
+        const agencyComm  = rate > 0 ? parseFloat((premium * (rate / 100)).toFixed(2)) : (e.agencyCommission || 0);
+        const agentShare  = parseFloat(((agencyFee + agencyComm) * 0.5).toFixed(2));
+        return { ...e, paymentType, agencyCommission: agencyComm, agentCommissionShare: agentShare };
+    });
+
+    localStorage.setItem('binderData', JSON.stringify(allData));
+    driveSet('binderData', allData);
+    recalculateAllCommissions();
+
+    if (typeof loadAdminData === 'function') loadAdminData();
+    if (typeof apdInit       === 'function') apdInit();
+
+    alert(`✅ Done! ${matches.toLocaleString()} entries for "${agentName}" updated to ${paymentType}.`);
+}
+
 // ── Retroactive Commission Recalculation ─────────────────────────────────────
 async function recalculateAllBinderCommissions() {
     const total = allData.length;
