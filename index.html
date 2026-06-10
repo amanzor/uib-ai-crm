@@ -1439,12 +1439,69 @@
                                 </select>
                             </div>
                         </div>
+                        <!-- File Attachment Section -->
+                        <div style="margin:4px 0 16px 0;padding:12px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <span style="font-size:13px;color:#374151;font-weight:600;">📁 Attach Documents</span>
+                            <button type="button" id="binderAttachBtn" onclick="binderOpenPendingFileModal()" style="padding:7px 16px;font-size:13px;border:none;border-radius:7px;cursor:pointer;background:#16a34a;color:#fff;font-weight:600;display:flex;align-items:center;gap:6px;transition:background .2s;">
+                                📎 Attach Files
+                            </button>
+                            <span id="binderAttachBadge" style="display:none;background:#059669;color:#fff;font-size:12px;font-weight:700;border-radius:12px;padding:2px 10px;"></span>
+                            <span style="font-size:12px;color:#6b7280;font-style:italic;">Files attach to this client in AMS</span>
+                        </div>
                         <div class="form-actions" style="justify-content:center;">
                             <button type="submit" class="btn-success" style="padding:12px 40px;font-size:15px;">💾 Save Policy Entry</button>
                         </div>
                     </form>
                     </div><!-- end modal-content -->
                 </div><!-- end dailySalesModal -->
+
+                <!-- ── Binder File Upload Modal ─────────────────────────── -->
+                <div id="binderFileModal" class="modal" style="align-items:flex-start;padding:20px 0;z-index:3000;">
+                    <div class="modal-content" style="max-width:600px;width:96%;max-height:88vh;overflow-y:auto;margin-top:30px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                            <h3 style="margin:0;color:#065f46;font-size:16px;">📁 Client Files</h3>
+                            <button type="button" class="btn-danger btn-sm" onclick="binderCloseFileModal()">✕ Close</button>
+                        </div>
+                        <div style="font-size:13px;color:#374151;margin-bottom:14px;padding:10px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
+                            <strong>Client:</strong> <span id="binderFileClientNameText" style="color:#065f46;font-weight:700;">—</span>
+                            <span style="margin-left:10px;font-size:11px;color:#6b7280;font-style:italic;">Files shared with AMS</span>
+                        </div>
+
+                        <!-- Existing / queued files list -->
+                        <div style="margin-bottom:16px;">
+                            <h4 style="color:#374151;margin:0 0 8px 0;font-size:13px;font-weight:700;">📋 Files</h4>
+                            <div id="binderFileList" style="min-height:60px;border:1px solid #e5e7eb;border-radius:8px;padding:6px;background:#fafafa;">
+                                <div style="color:#9ca3af;font-style:italic;text-align:center;padding:16px;font-size:13px;">Loading…</div>
+                            </div>
+                        </div>
+
+                        <!-- Upload new files -->
+                        <div style="background:#f8fafc;border:1.5px dashed #a7f3d0;border-radius:10px;padding:14px;">
+                            <h4 style="color:#065f46;margin:0 0 12px 0;font-size:13px;font-weight:700;">⬆️ Add Files</h4>
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <div>
+                                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Category</label>
+                                    <select id="binderFileCategory" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                                        <option value="Policy">Policy Document</option>
+                                        <option value="Quote">Quote</option>
+                                        <option value="ID">ID / Identification</option>
+                                        <option value="Claims">Claims</option>
+                                        <option value="Correspondence">Correspondence</option>
+                                        <option value="Other" selected>Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Select Files</label>
+                                    <input type="file" id="binderFileInput" multiple style="width:100%;font-size:13px;padding:6px;border:1px solid #d1d5db;border-radius:6px;background:#fff;">
+                                </div>
+                                <button type="button" id="binderUploadBtn" onclick="binderDoUpload()" class="btn-success" style="align-self:flex-start;padding:8px 20px;font-size:13px;">
+                                    <i data-lucide="upload"></i> Upload Files
+                                </button>
+                                <div id="binderUploadStatus" style="display:none;font-size:13px;color:#059669;font-weight:600;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end binderFileModal -->
 
                 <div>
                     <h3 style="color: #333; margin: 30px 0 20px 0; font-size: 1.3em;">📊 Your Submissions</h3>
@@ -2871,7 +2928,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260524p"></script>
-    <script src="app.js?v=20260524p"></script>
+    <script src="motion.js?v=20260609"></script>
+    <script src="app.js?v=20260609"></script>
 </body>
 </html>

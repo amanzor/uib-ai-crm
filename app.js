@@ -594,6 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeCredentials();
     initializeCommissionData();
     initializeCarrierData();
+    binderInitDB(); // IndexedDB for AMS file system (shared with ams.html)
     refreshAllCarrierDropdowns();
     initializeAgentData();
     initializeCommissionStatements();
@@ -940,6 +941,11 @@ function saveEntry() {
         // Save updated commission data
         localStorage.setItem('commissionData', JSON.stringify(commData));
         commissionData = commData;
+    }
+
+    // Save any pending files attached from the new entry form
+    if (_pendingEntryFiles.length > 0) {
+        binderSavePendingFiles(entry.customerName, entry.id);
     }
 
     showSuccess();
@@ -1446,6 +1452,9 @@ function closeDailySalesModal() {
     _selectedSalesLocation = '';
     document.getElementById('salesLocationDisplay').textContent = '—';
     clientLookupClear();
+    // Clear any pending files that weren't saved
+    _pendingEntryFiles = [];
+    binderUpdateAttachButton();
     // Clear auto-calculated commission display
     const comm = document.getElementById('agencyCommission');
     const agent = document.getElementById('agentCommission');
@@ -1654,7 +1663,8 @@ function renderAgentTable(entries) {
             <td>${entry.policyNumber || '-'}</td>
             <td>$${entry.totalPremium.toFixed(2)}</td>
             <td style="white-space:nowrap;">
-                <button class="btn-primary btn-sm" onclick="openEditModal(${entry.id})"><i data-lucide="pencil"></i> Edit</button>
+                <button class="btn-primary btn-sm" onclick="openEditModal(${entry.id})" style="margin-right:2px;"><i data-lucide="pencil"></i> Edit</button>
+                <button class="btn-success btn-sm" onclick="binderOpenFileModal(${entry.id}, ${JSON.stringify(entry.customerName)})" data-binder-file-btn="${entry.id}" title="Manage Files" style="margin-right:2px;background:#059669;"><i data-lucide="folder-open"></i></button>
                 <button class="btn-danger btn-sm" onclick="deleteEntry(${entry.id})"><i data-lucide="trash-2"></i> Delete</button>
             </td>
         </tr>
@@ -1855,7 +1865,8 @@ function renderAdminTable(entries) {
             <td>${entry.binderNumber}</td>
             <td>$${entry.totalPremium.toFixed(2)}</td>
             <td style="white-space:nowrap;">
-                <button class="btn-primary btn-sm" onclick="openEditModal(${entry.id})" style="margin-right:4px;"><i data-lucide="pencil"></i> Edit</button>
+                <button class="btn-primary btn-sm" onclick="openEditModal(${entry.id})" style="margin-right:2px;"><i data-lucide="pencil"></i> Edit</button>
+                <button class="btn-success btn-sm" onclick="binderOpenFileModal(${entry.id}, ${JSON.stringify(entry.customerName)})" data-binder-file-btn="${entry.id}" title="Manage Files" style="margin-right:2px;background:#059669;"><i data-lucide="folder-open"></i></button>
                 <button class="btn-danger btn-sm" onclick="deleteEntry(${entry.id})"><i data-lucide="trash-2"></i> Delete</button>
             </td>
         </tr>`;
@@ -5464,4 +5475,315 @@ async function importJorgeCastroData() {
     if (typeof loadAdminData === 'function') loadAdminData();
     if (typeof apdInit     === 'function') apdInit();
     if (typeof prodApplyFilters === 'function') prodApplyFilters();
+}
+
+// ============================================================
+// BINDER FILE SYSTEM — IndexedDB integration with UIB AMS
+// Shares the same 'UIB_AMS_Files' DB as ams.html so files
+// uploaded here are visible in the AMS client view and vice versa.
+// ============================================================
+
+let binderDB = null;
+let _binderFileModalClientKey = '';
+let _binderFileModalEntryId   = null;
+let _binderFileIsPendingMode  = false;
+let _pendingEntryFiles        = [];   // files queued for a new entry not yet saved
+
+// ── DB helpers ───────────────────────────────────────────────
+
+function binderInitDB() {
+    return new Promise((resolve) => {
+        const req = indexedDB.open('UIB_AMS_Files', 2);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('files')) {
+                const store = db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
+                store.createIndex('clientKey',  'clientKey',  { unique: false });
+                store.createIndex('uploadedAt', 'uploadedAt', { unique: false });
+                store.createIndex('category',   'category',   { unique: false });
+            }
+        };
+        req.onsuccess = e => { binderDB = e.target.result; resolve(binderDB); };
+        req.onerror   = e => { console.warn('Binder IndexedDB error:', e.target.error); resolve(null); };
+    });
+}
+
+function binderClientKey(name) {
+    return (name || '').trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+function binderDBGetFiles(clientKey) {
+    return new Promise((resolve) => {
+        if (!binderDB) { resolve([]); return; }
+        const tx  = binderDB.transaction('files', 'readonly');
+        const req = tx.objectStore('files').index('clientKey').getAll(clientKey);
+        req.onsuccess = e => resolve(e.target.result || []);
+        req.onerror   = () => resolve([]);
+    });
+}
+
+function binderDBAddFile(record) {
+    return new Promise((resolve, reject) => {
+        if (!binderDB) { reject('DB not ready'); return; }
+        const tx  = binderDB.transaction('files', 'readwrite');
+        const req = tx.objectStore('files').add(record);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function binderDBDeleteFile(id) {
+    return new Promise((resolve, reject) => {
+        if (!binderDB) { reject('DB not ready'); return; }
+        const tx  = binderDB.transaction('files', 'readwrite');
+        const req = tx.objectStore('files').delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+
+/** Open the file modal for a SAVED entry (admin or agent table row) */
+function binderOpenFileModal(entryId, customerName) {
+    _binderFileIsPendingMode  = false;
+    _binderFileModalClientKey = binderClientKey(customerName);
+    _binderFileModalEntryId   = entryId;
+    document.getElementById('binderFileClientNameText').textContent = customerName;
+    document.getElementById('binderFileInput').value  = '';
+    document.getElementById('binderUploadStatus').style.display = 'none';
+    const modal = document.getElementById('binderFileModal');
+    modal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
+    refreshIcons();
+    binderLoadFileList();
+}
+
+/** Open the file modal from the NEW ENTRY FORM before saving */
+function binderOpenPendingFileModal() {
+    _binderFileIsPendingMode = true;
+    _binderFileModalEntryId  = null;
+    const name = (document.getElementById('customerName')?.value || '').trim();
+    _binderFileModalClientKey = binderClientKey(name);
+    document.getElementById('binderFileClientNameText').textContent = name || '(Enter customer name in form first)';
+    document.getElementById('binderFileInput').value  = '';
+    document.getElementById('binderUploadStatus').style.display = 'none';
+    const modal = document.getElementById('binderFileModal');
+    modal.classList.add('active');
+    if (window.UIBMotion) UIBMotion.animateModalOpen(modal);
+    refreshIcons();
+    binderShowPendingFiles();
+}
+
+function binderCloseFileModal() {
+    document.getElementById('binderFileModal').classList.remove('active');
+}
+
+// ── File list rendering ───────────────────────────────────────
+
+async function binderLoadFileList() {
+    if (_binderFileIsPendingMode) { binderShowPendingFiles(); return; }
+    const container = document.getElementById('binderFileList');
+    container.innerHTML = '<div style="color:#9ca3af;font-style:italic;text-align:center;padding:16px;">Loading files…</div>';
+    if (!binderDB) await binderInitDB();
+    const files = await binderDBGetFiles(_binderFileModalClientKey);
+    if (files.length === 0) {
+        container.innerHTML = '<div style="color:#9ca3af;font-style:italic;text-align:center;padding:16px;">No files uploaded for this client yet.</div>';
+        return;
+    }
+    container.innerHTML = files.map(f => `
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:13px;">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)}">📄 ${escHtml(f.name)}</span>
+            <span style="color:#6b7280;font-size:12px;white-space:nowrap;padding:2px 6px;background:#f3f4f6;border-radius:4px;">${escHtml(f.category || 'Other')}</span>
+            <span style="color:#9ca3af;font-size:11px;white-space:nowrap;">${new Date(f.uploadedAt).toLocaleDateString()}</span>
+            <button class="btn-primary btn-sm" onclick="binderDownloadFile(${f.id})" style="padding:3px 8px;font-size:11px;" title="Download">⬇️</button>
+            <button class="btn-danger btn-sm" onclick="binderDeleteFile(${f.id})" style="padding:3px 8px;font-size:11px;" title="Delete">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function binderShowPendingFiles() {
+    const container = document.getElementById('binderFileList');
+    if (_pendingEntryFiles.length === 0) {
+        container.innerHTML = '<div style="color:#9ca3af;font-style:italic;text-align:center;padding:16px;">No files queued yet. Select files below — they\'ll be saved when you save the entry.</div>';
+        return;
+    }
+    container.innerHTML = _pendingEntryFiles.map((pf, i) => `
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:13px;">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(pf.name)}">📄 ${escHtml(pf.name)}</span>
+            <span style="color:#6b7280;font-size:12px;white-space:nowrap;padding:2px 6px;background:#f3f4f6;border-radius:4px;">${escHtml(pf.category)}</span>
+            <span style="color:#9ca3af;font-size:11px;white-space:nowrap;">${(pf.size / 1024).toFixed(1)} KB</span>
+            <button class="btn-danger btn-sm" onclick="binderRemovePendingFile(${i})" style="padding:3px 8px;font-size:11px;" title="Remove">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Upload (saved entries) ────────────────────────────────────
+
+async function binderDoUpload() {
+    if (_binderFileIsPendingMode) { binderAddPendingFiles(); return; }
+
+    const fileInput = document.getElementById('binderFileInput');
+    const category  = document.getElementById('binderFileCategory').value;
+    const statusDiv = document.getElementById('binderUploadStatus');
+    const uploadBtn = document.getElementById('binderUploadBtn');
+    const files     = fileInput.files;
+
+    if (!files || files.length === 0) { alert('Please select at least one file to upload.'); return; }
+    if (!binderDB) await binderInitDB();
+
+    uploadBtn.disabled    = true;
+    uploadBtn.textContent = 'Uploading…';
+    statusDiv.style.display = 'none';
+
+    let uploaded = 0;
+    for (const file of files) {
+        try {
+            const buffer = await file.arrayBuffer();
+            await binderDBAddFile({
+                clientKey:  _binderFileModalClientKey,
+                name:       file.name,
+                path:       '',
+                fullPath:   file.name,
+                type:       file.type || 'application/octet-stream',
+                size:       file.size,
+                category:   category,
+                uploadedAt: new Date().toISOString(),
+                uploadedBy: currentUser || 'Agent',
+                data:       buffer
+            });
+            uploaded++;
+        } catch (err) {
+            console.warn('Failed to upload:', file.name, err);
+        }
+    }
+
+    uploadBtn.disabled     = false;
+    uploadBtn.innerHTML    = '<i data-lucide="upload"></i> Upload Files';
+    fileInput.value        = '';
+    statusDiv.style.display = 'block';
+    statusDiv.textContent  = `✅ ${uploaded} file${uploaded !== 1 ? 's' : ''} uploaded successfully!`;
+    refreshIcons();
+    await binderLoadFileList();
+    if (_binderFileModalEntryId) binderUpdateFileBadge(_binderFileModalEntryId, _binderFileModalClientKey);
+}
+
+// ── Queue files for pending new entry ────────────────────────
+
+function binderAddPendingFiles() {
+    const fileInput = document.getElementById('binderFileInput');
+    const category  = document.getElementById('binderFileCategory').value;
+    const statusDiv = document.getElementById('binderUploadStatus');
+    const files     = fileInput.files;
+
+    if (!files || files.length === 0) { alert('Please select at least one file.'); return; }
+
+    for (const file of files) {
+        _pendingEntryFiles.push({ file, name: file.name, category, size: file.size });
+    }
+    fileInput.value = '';
+    statusDiv.style.display = 'block';
+    statusDiv.textContent   = `✅ ${files.length} file${files.length !== 1 ? 's' : ''} queued — will upload when you save the entry.`;
+    binderShowPendingFiles();
+    binderUpdateAttachButton();
+}
+
+function binderRemovePendingFile(index) {
+    _pendingEntryFiles.splice(index, 1);
+    binderShowPendingFiles();
+    binderUpdateAttachButton();
+}
+
+function binderUpdateAttachButton() {
+    const btn   = document.getElementById('binderAttachBtn');
+    const badge = document.getElementById('binderAttachBadge');
+    if (!btn) return;
+    const count = _pendingEntryFiles.length;
+    if (count > 0) {
+        btn.innerHTML = `📎 ${count} File${count !== 1 ? 's' : ''} Attached`;
+        btn.style.background = '#059669';
+        if (badge) { badge.textContent = count; badge.style.display = 'inline'; }
+    } else {
+        btn.innerHTML = '📎 Attach Files';
+        btn.style.background = '';
+        if (badge) badge.style.display = 'none';
+    }
+}
+
+// ── Save pending files after entry is created ─────────────────
+
+async function binderSavePendingFiles(customerName, entryId) {
+    if (_pendingEntryFiles.length === 0) return;
+    if (!binderDB) await binderInitDB();
+    const clientKey = binderClientKey(customerName);
+    for (const pf of _pendingEntryFiles) {
+        try {
+            const buffer = await pf.file.arrayBuffer();
+            await binderDBAddFile({
+                clientKey,
+                name:       pf.name,
+                path:       '',
+                fullPath:   pf.name,
+                type:       pf.file.type || 'application/octet-stream',
+                size:       pf.size,
+                category:   pf.category,
+                uploadedAt: new Date().toISOString(),
+                uploadedBy: currentUser || 'Agent',
+                data:       buffer
+            });
+        } catch (err) {
+            console.warn('Failed to save pending file:', pf.name, err);
+        }
+    }
+    _pendingEntryFiles = [];
+    binderUpdateAttachButton();
+}
+
+// ── Download & delete from modal ─────────────────────────────
+
+async function binderDownloadFile(fileId) {
+    if (!binderDB) await binderInitDB();
+    const tx  = binderDB.transaction('files', 'readonly');
+    const req = tx.objectStore('files').get(fileId);
+    req.onsuccess = e => {
+        const f = e.target.result;
+        if (!f) return;
+        const blob = new Blob([f.data], { type: f.type });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = f.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    };
+}
+
+async function binderDeleteFile(fileId) {
+    if (!confirm('Delete this file? This cannot be undone.')) return;
+    try {
+        await binderDBDeleteFile(fileId);
+        await binderLoadFileList();
+        if (_binderFileModalEntryId) binderUpdateFileBadge(_binderFileModalEntryId, _binderFileModalClientKey);
+    } catch (err) {
+        alert('Error deleting file: ' + err);
+    }
+}
+
+// ── Update file-count badge on table row button ───────────────
+
+async function binderUpdateFileBadge(entryId, clientKey) {
+    if (!binderDB) return;
+    const files = await binderDBGetFiles(clientKey);
+    const btn   = document.querySelector(`[data-binder-file-btn="${entryId}"]`);
+    if (!btn) return;
+    const count = files.length;
+    btn.innerHTML = count > 0
+        ? `<i data-lucide="folder-open"></i> <span style="font-size:11px;font-weight:700;">${count}</span>`
+        : '<i data-lucide="folder-open"></i>';
+    btn.title = count > 0 ? `${count} file${count !== 1 ? 's' : ''} — Click to manage` : 'Upload files';
+    refreshIcons();
 }
