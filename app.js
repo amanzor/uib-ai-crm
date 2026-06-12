@@ -1636,6 +1636,95 @@ function clientLookupSelect(name) {
     if (clearBtn) clearBtn.value = name;
 }
 
+// ── Agent Portal Universal Search ────────────────────────────
+
+let _agentSearchTimer = null;
+
+function agentGlobalSearchRun(query) {
+    const clearBtn = document.getElementById('agentGlobalSearchClearBtn');
+    const results  = document.getElementById('agentGlobalSearchResults');
+    if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+    if (!results) return;
+
+    clearTimeout(_agentSearchTimer);
+    const q = query.trim().toLowerCase();
+
+    if (q.length < 2) {
+        results.innerHTML = '';
+        return;
+    }
+
+    _agentSearchTimer = setTimeout(() => {
+        const matches = (allData || []).filter(e => {
+            return (e.customerName   || '').toLowerCase().includes(q) ||
+                   (e.company        || '').toLowerCase().includes(q) ||
+                   (e.policyNumber   || '').toLowerCase().includes(q) ||
+                   (e.binderNumber   || '').toLowerCase().includes(q) ||
+                   (e.lineOfBusiness || '').toLowerCase().includes(q) ||
+                   (e.agent          || '').toLowerCase().includes(q) ||
+                   (e.location       || '').toLowerCase().includes(q) ||
+                   (e.policyType     || '').toLowerCase().includes(q) ||
+                   (e.source         || '').toLowerCase().includes(q);
+        }).sort((a, b) => (b.entryDate || '').localeCompare(a.entryDate || ''));
+
+        if (matches.length === 0) {
+            results.innerHTML = `<div style="padding:12px 14px;background:#fff;border-radius:8px;font-size:13px;color:#64748b;border:1px solid #e5e7eb;">No entries found for "<strong>${q}</strong>"</div>`;
+            return;
+        }
+
+        const shown = matches.slice(0, 50);
+        const rows  = shown.map(e => `
+            <tr style="font-size:13px;">
+                <td style="white-space:nowrap;color:#64748b;">${formatDate(e.entryDate)}</td>
+                <td style="font-weight:600;color:#1e293b;">${e.customerName || '—'}</td>
+                <td><span style="background:#eff6ff;color:#1d4ed8;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;">${e.agent || '—'}</span></td>
+                <td style="color:#374151;">${e.policyType || '—'}</td>
+                <td style="color:#374151;">${e.lineOfBusiness || '—'}</td>
+                <td style="font-weight:600;">${e.company || '—'}</td>
+                <td style="font-family:monospace;font-size:12px;">${e.policyNumber || '—'}</td>
+                <td style="font-weight:700;color:#0d1f3c;">$${parseFloat(e.totalPremium || 0).toFixed(2)}</td>
+                <td style="color:#64748b;font-size:12px;">${e.location || '—'}</td>
+            </tr>`).join('');
+
+        const more = matches.length > 50 ? `<div style="padding:8px 14px;font-size:12px;color:#94a3b8;text-align:center;">Showing 50 of ${matches.length} results — refine your search for more</div>` : '';
+
+        results.innerHTML = `
+            <div style="font-size:12px;font-weight:600;color:#0369a1;margin-bottom:8px;padding:0 2px;">
+                ${matches.length} result${matches.length !== 1 ? 's' : ''} found
+            </div>
+            <div style="overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+                <table style="width:100%;border-collapse:collapse;min-width:700px;">
+                    <thead>
+                        <tr style="background:#f8fafc;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Date</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Customer</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Agent</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Type</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">LOB</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Carrier</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Policy #</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Premium</th>
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;">Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+            ${more}`;
+    }, 200);
+}
+
+function agentGlobalSearchClear() {
+    const inp  = document.getElementById('agentGlobalSearch');
+    const btn  = document.getElementById('agentGlobalSearchClearBtn');
+    const res  = document.getElementById('agentGlobalSearchResults');
+    if (inp) inp.value = '';
+    if (btn) btn.style.display = 'none';
+    if (res) res.innerHTML = '';
+}
+
 // ── Customer Name Autocomplete (BinderBook + AMS) ─────────────
 
 let _cnDropdownIndex = -1;

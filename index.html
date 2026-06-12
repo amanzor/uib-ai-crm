@@ -1534,6 +1534,26 @@
                     </div>
                 </div><!-- end binderFileModal -->
 
+                <!-- ── Universal Search ── -->
+                <div style="margin:24px 0 0 0;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:14px;padding:18px 20px;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <i data-lucide="search" style="width:18px;height:18px;color:#0369a1;flex-shrink:0;"></i>
+                        <span style="font-size:14px;font-weight:700;color:#0369a1;">Search All Entries</span>
+                        <span style="font-size:12px;color:#64748b;font-style:italic;">— any agent, any location</span>
+                    </div>
+                    <div style="position:relative;">
+                        <input type="text" id="agentGlobalSearch"
+                            placeholder="Search by customer, carrier, policy #, binder #, LOB, agent, location…"
+                            oninput="agentGlobalSearchRun(this.value)"
+                            autocomplete="off"
+                            style="width:100%;padding:11px 40px 11px 14px;border:1.5px solid #7dd3fc;border-radius:10px;font-size:14px;background:#fff;outline:none;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.07);">
+                        <button type="button" onclick="agentGlobalSearchClear()" id="agentGlobalSearchClearBtn"
+                            style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:#94a3b8;cursor:pointer;padding:4px;">✕</button>
+                    </div>
+                    <!-- Results -->
+                    <div id="agentGlobalSearchResults" style="margin-top:10px;"></div>
+                </div>
+
                 <div>
                     <h3 style="color: #333; margin: 30px 0 20px 0; font-size: 1.3em;">📊 Your Submissions</h3>
                     <div class="filter-section">
@@ -2959,7 +2979,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260612b"></script>
-    <script src="app.js?v=20260612b"></script>
+    <script src="motion.js?v=20260612c"></script>
+    <script src="app.js?v=20260612c"></script>
 </body>
 </html>
