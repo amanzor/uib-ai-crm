@@ -751,8 +751,25 @@ function amsFlashBanner(msg) {
 }
 
 // ── Init ─────────────────────────────────────────────────────
+const AMS_DRIVE_URL = "https://script.google.com/macros/s/AKfycbypm1A3G5Wgf4onwSU-yk6FbmTOA-9in7HcFrg0YWL6UBdhNj4di7yVDNlflLYwaehI/exec";
+
+async function amsPullCredentialsFromDrive() {
+    try {
+        const res  = await fetch(`${AMS_DRIVE_URL}?key=agentCredentials`);
+        const json = await res.json();
+        if (json.success && json.data && typeof json.data === 'object') {
+            localStorage.setItem('agentCredentials', JSON.stringify(json.data));
+        }
+    } catch (e) {
+        // Drive unavailable — use whatever is in localStorage already
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
+
+    // Pull latest credentials from Drive so login works on any device
+    amsPullCredentialsFromDrive();
 
     // Pre-fill remembered email
     const remembered = localStorage.getItem('amsRememberedEmail');

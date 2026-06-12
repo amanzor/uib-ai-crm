@@ -26,9 +26,8 @@ async function driveSet(key, value) {
     }
 }
 
-// Keys that should never be overwritten by a Drive pull —
-// credentials are pushed to Drive as backup but managed locally only.
-const DRIVE_PULL_SKIP = new Set(['agentCredentials']);
+// Keys that should never be overwritten by a Drive pull.
+const DRIVE_PULL_SKIP = new Set([]);
 
 async function syncFromDrive() {
     const banner = document.getElementById('syncBanner');
@@ -306,6 +305,12 @@ async function syncToSheet(action, payload) {
 }
 
 const AGENTS = ['Alberto Manzor', 'Randy Diaz', 'Amanda Montano', 'Uriel Rendon', 'Jorge Castro', 'Lazaro Reigoza'];
+
+function getAllAgents() {
+    const fromCreds  = Object.keys(JSON.parse(localStorage.getItem('agentCredentials') || '{}'));
+    const fromMaster = Object.keys(JSON.parse(localStorage.getItem('agentMasterData')  || '{}'));
+    return [...new Set([...AGENTS, ...fromCreds, ...fromMaster])].sort();
+}
 
 // Initialize credentials — structure: { "Agent Name": { email, password } }
 function initializeCredentials() {
@@ -669,8 +674,7 @@ function initializeAgentButtons() {
     if (!agentList) return;
     agentList.innerHTML = '';
 
-    AGENTS.forEach(agent => {
-
+    getAllAgents().forEach(agent => {
         const btn = document.createElement('button');
         btn.className = 'agent-btn';
         btn.innerHTML = `
@@ -966,13 +970,10 @@ function selectDealerAndOpenLog(dealerName) {
     const dtDisplay = document.getElementById('vl_dateTimeDisplay');
     if (dtDisplay) dtDisplay.textContent = '🕐 ' + getEasternDateTimeDisplay();
 
-    // Populate agent dropdown — combine all three sources, dedup, sort
+    // Populate agent dropdown
     const sel = document.getElementById('vl_agent');
-    const fromMaster      = Object.keys(JSON.parse(localStorage.getItem('agentMasterData'))  || {});
-    const fromCredentials = Object.keys(JSON.parse(localStorage.getItem('agentCredentials')) || {});
-    const allAgents = [...new Set([...AGENTS, ...fromMaster, ...fromCredentials])].sort();
     sel.innerHTML = '<option value="">Select Agent</option>' +
-        allAgents.map(a => `<option value="${a}">${a}</option>`).join('');
+        getAllAgents().map(a => `<option value="${a}">${a}</option>`).join('');
 
     document.getElementById('verificationSuccessMsg').style.display = 'none';
     const vlModal = document.getElementById('dailyVerificationModal');
@@ -1223,10 +1224,7 @@ function openNewProspectModal() {
     populateProspectReferralDropdown('');
 
     // Build agent multi-select checkboxes
-    const stored  = JSON.parse(localStorage.getItem('agentMasterData')) || {};
-    const creds   = JSON.parse(localStorage.getItem('agentCredentials')) || {};
-    const agentSet = new Set([...Object.keys(stored), ...Object.keys(creds), ...AGENTS]);
-    const agents  = [...agentSet].sort();
+    const agents = getAllAgents();
     const box = document.getElementById('prospectAgentCheckboxes');
     if (box) {
         box.innerHTML = agents.map(a => `
@@ -2500,7 +2498,7 @@ function loadPasswordManagementTable() {
     const credentials = JSON.parse(localStorage.getItem('agentCredentials')) || {};
     const tbody = document.getElementById('passwordTable');
 
-    tbody.innerHTML = AGENTS.map(agent => {
+    tbody.innerHTML = getAllAgents().map(agent => {
         // Support both old flat-string format and new {email, password} format
         const cred = credentials[agent];
         const pw   = typeof cred === 'object' ? (cred?.password || '') : (cred || '');
