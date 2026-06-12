@@ -1232,6 +1232,10 @@ function openNewProspectModal() {
     // Set today's date + time (ET)
     document.getElementById('prospectDateAdded').value = getEasternDateTimeDisplay();
 
+    // Populate Source and Referred By dropdowns
+    populateSourceDropdown('prospectSource', '');
+    populateProspectReferralDropdown('');
+
     // Build agent multi-select checkboxes
     const stored  = JSON.parse(localStorage.getItem('agentMasterData')) || {};
     const creds   = JSON.parse(localStorage.getItem('agentCredentials')) || {};
@@ -1255,7 +1259,9 @@ function openNewProspectModal() {
 function closeNewProspectModal() {
     document.getElementById('newProspectModal').classList.remove('active');
     document.getElementById('prospectForm').reset();
-    document.getElementById('prospectAgentDropdown').style.display = 'none';
+    document.getElementById('prospectNewSourceRow').style.display   = 'none';
+    document.getElementById('prospectNewReferralRow').style.display = 'none';
+    document.getElementById('prospectAgentDropdown').style.display  = 'none';
     document.querySelectorAll('.prospect-agent-cb').forEach(cb => cb.checked = false);
     document.getElementById('prospectAgentSelectAll').checked = false;
     prospectAgentUpdateDisplay();
@@ -5844,3 +5850,95 @@ document.addEventListener('click', e => {
         dd.style.display = 'none';
     }
 });
+
+// ============================================================
+// PROSPECT FORM — SOURCE + REFERRED BY ADD-NEW
+// ============================================================
+
+// ── Source (reuses the shared customSources store) ────────────
+
+function prospectSourceChanged(sel) {
+    if (sel.value === '__add_new__') {
+        sel.value = '';
+        openProspectAddSource();
+    }
+}
+
+function openProspectAddSource() {
+    const row = document.getElementById('prospectNewSourceRow');
+    const inp = document.getElementById('prospectNewSourceInput');
+    if (row) row.style.display = 'block';
+    if (inp) { inp.value = ''; inp.focus(); }
+}
+
+function cancelProspectNewSource() {
+    document.getElementById('prospectNewSourceRow').style.display = 'none';
+}
+
+function saveProspectNewSource() {
+    const inp = document.getElementById('prospectNewSourceInput');
+    const val = (inp?.value || '').trim();
+    if (!val) { inp?.focus(); return; }
+
+    const customs = getCustomSources();
+    const all     = [...DEFAULT_SOURCES, ...customs];
+    if (!all.map(s => s.toLowerCase()).includes(val.toLowerCase())) {
+        customs.push(val);
+        saveCustomSources(customs);
+    }
+    populateSourceDropdown('prospectSource', val);
+    document.getElementById('prospectSource').value = val;
+    cancelProspectNewSource();
+}
+
+// ── Referred By (own customReferrals store) ───────────────────
+
+function getCustomReferrals() {
+    try { return JSON.parse(localStorage.getItem('customReferrals')) || []; } catch(e) { return []; }
+}
+
+function saveCustomReferrals(arr) {
+    localStorage.setItem('customReferrals', JSON.stringify(arr));
+}
+
+function populateProspectReferralDropdown(selectedValue) {
+    const sel = document.getElementById('prospectReferredBy');
+    if (!sel) return;
+    const referrals = getCustomReferrals();
+    sel.innerHTML = '<option value="">Select or add referral…</option>' +
+        referrals.map(r => `<option value="${r}"${r === selectedValue ? ' selected' : ''}>${r}</option>`).join('') +
+        '<option value="__add_new__">＋ Add New Referral…</option>';
+}
+
+function prospectReferralChanged(sel) {
+    if (sel.value === '__add_new__') {
+        sel.value = '';
+        openProspectAddReferral();
+    }
+}
+
+function openProspectAddReferral() {
+    const row = document.getElementById('prospectNewReferralRow');
+    const inp = document.getElementById('prospectNewReferralInput');
+    if (row) row.style.display = 'block';
+    if (inp) { inp.value = ''; inp.focus(); }
+}
+
+function cancelProspectNewReferral() {
+    document.getElementById('prospectNewReferralRow').style.display = 'none';
+}
+
+function saveProspectNewReferral() {
+    const inp = document.getElementById('prospectNewReferralInput');
+    const val = (inp?.value || '').trim();
+    if (!val) { inp?.focus(); return; }
+
+    const referrals = getCustomReferrals();
+    if (!referrals.map(r => r.toLowerCase()).includes(val.toLowerCase())) {
+        referrals.push(val);
+        saveCustomReferrals(referrals);
+    }
+    populateProspectReferralDropdown(val);
+    document.getElementById('prospectReferredBy').value = val;
+    cancelProspectNewReferral();
+}

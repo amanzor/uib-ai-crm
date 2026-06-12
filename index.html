@@ -850,21 +850,37 @@
                             </div>
                             <div class="form-group">
                                 <label>Source</label>
-                                <select id="prospectSource">
-                                    <option value="">Select Source</option>
-                                    <option value="Referral">Referral</option>
-                                    <option value="Walk-In">Walk-In</option>
-                                    <option value="Online">Online</option>
-                                    <option value="Phone">Phone</option>
-                                    <option value="Repeat Client">Repeat Client</option>
-                                    <option value="Social Media">Social Media</option>
-                                    <option value="Agent Referral">Agent Referral</option>
-                                    <option value="Other">Other</option>
-                                </select>
+                                <div style="display:flex;gap:6px;align-items:center;">
+                                    <select id="prospectSource" onchange="prospectSourceChanged(this)" style="flex:1;"></select>
+                                    <button type="button" onclick="openProspectAddSource()" title="Add new source"
+                                        style="flex-shrink:0;padding:7px 11px;background:linear-gradient(to right,#0f2a78,#2563eb);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;">＋</button>
+                                </div>
+                                <div id="prospectNewSourceRow" style="display:none;margin-top:6px;">
+                                    <input type="text" id="prospectNewSourceInput" placeholder="Type new source name…"
+                                        style="width:100%;padding:7px 10px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;box-sizing:border-box;"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();saveProspectNewSource();}">
+                                    <div style="display:flex;gap:6px;margin-top:5px;">
+                                        <button type="button" onclick="saveProspectNewSource()" class="btn-primary btn-sm" style="flex:1;">✓ Save</button>
+                                        <button type="button" onclick="cancelProspectNewSource()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Referred By</label>
-                                <input type="text" id="prospectReferredBy" placeholder="Name of referrer">
+                                <div style="display:flex;gap:6px;align-items:center;">
+                                    <select id="prospectReferredBy" onchange="prospectReferralChanged(this)" style="flex:1;"></select>
+                                    <button type="button" onclick="openProspectAddReferral()" title="Add new referral"
+                                        style="flex-shrink:0;padding:7px 11px;background:linear-gradient(to right,#059669,#047857);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;">＋</button>
+                                </div>
+                                <div id="prospectNewReferralRow" style="display:none;margin-top:6px;">
+                                    <input type="text" id="prospectNewReferralInput" placeholder="Type new referral name…"
+                                        style="width:100%;padding:7px 10px;border:1px solid #a7f3d0;border-radius:6px;font-size:13px;box-sizing:border-box;"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();saveProspectNewReferral();}">
+                                    <div style="display:flex;gap:6px;margin-top:5px;">
+                                        <button type="button" onclick="saveProspectNewReferral()" class="btn-success btn-sm" style="flex:1;">✓ Save</button>
+                                        <button type="button" onclick="cancelProspectNewReferral()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Assigned Agent</label>
