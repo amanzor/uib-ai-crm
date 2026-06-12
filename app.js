@@ -409,7 +409,7 @@ function submitAgentEmailLogin(e) {
 
     const remember = document.getElementById('rememberAgentEmail')?.checked;
     if (remember) {
-        localStorage.setItem('rememberedAgentEmail', input);
+        localStorage.setItem('rememberedAgentEmail', email);
     } else {
         localStorage.removeItem('rememberedAgentEmail');
     }
@@ -492,20 +492,26 @@ function renderCredentialListPage() {
                     <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Email (username)</label>
                     <input type="email" id="page_cred_email_${key}"
                         value="${cred.email || ''}" placeholder="agent@email.com"
-                        onchange="autoSaveCredential('${agent}')"
+                        oninput="autoSaveCredential('${agent}')"
                         style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                 </div>
                 <div>
                     <label style="font-size:12px;color:var(--gray-500);font-weight:600;display:block;margin-bottom:4px;">Password</label>
                     <input type="text" id="page_cred_pass_${key}"
                         value="${cred.password || ''}" placeholder="Enter password"
-                        onchange="autoSaveCredential('${agent}')"
+                        oninput="autoSaveCredential('${agent}')"
                         style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;">
                 </div>
             </div>
         </div>`;
     }).join('');
     refreshIcons();
+
+    // Always push current credentials to Drive when the page opens —
+    // ensures Drive stays in sync even if no field is changed.
+    if (Object.keys(credentials).length > 0) {
+        driveSet('agentCredentials', credentials);
+    }
 }
 
 function autoSaveCredential(agent) {
