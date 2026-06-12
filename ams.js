@@ -92,6 +92,41 @@ function amsSave(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
+// Lock or unlock an agent <select> based on current role.
+// Agents see their own name locked; only admin can change it.
+function amsLockAgentField(sel) {
+    if (!sel) return;
+    if (amsCurrentRole !== 'admin') {
+        sel.disabled = true;
+        sel.title    = '🔒 Only Admin can change the assigned agent';
+        sel.style.background   = '#f3f4f6';
+        sel.style.cursor       = 'not-allowed';
+        sel.style.borderColor  = '#d1d5db';
+        sel.style.color        = '#6b7280';
+        // Add a lock label next to the field if not already there
+        const parent = sel.parentElement;
+        if (parent && !parent.querySelector('.ams-agent-lock-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'ams-agent-lock-badge';
+            badge.textContent = '🔒 Admin only';
+            badge.style.cssText = 'font-size:11px;color:#dc2626;font-weight:700;margin-left:8px;';
+            const label = parent.previousElementSibling || parent.querySelector('label');
+            if (label) label.appendChild(badge);
+        }
+    } else {
+        sel.disabled = false;
+        sel.title    = '';
+        sel.style.background  = '';
+        sel.style.cursor      = '';
+        sel.style.borderColor = '';
+        sel.style.color       = '';
+        // Remove lock badge if present
+        sel.closest('.info-field, .form-group, div')
+            ?.querySelectorAll('.ams-agent-lock-badge')
+            .forEach(b => b.remove());
+    }
+}
+
 function amsClientKey(name) {
     return (name || '').trim().toUpperCase().replace(/\s+/g, ' ');
 }
@@ -295,7 +330,7 @@ function amsPopulateModalDropdowns() {
         });
     }
 
-    // Contact: assigned agent
+    // Contact: assigned agent — admin only
     const ciAgent = document.getElementById('ci_assignedAgent');
     if (ciAgent) {
         ciAgent.innerHTML = '<option value="">— Select Agent —</option>';
@@ -303,6 +338,7 @@ function amsPopulateModalDropdowns() {
         Object.keys(creds).sort().forEach(a => {
             const o = document.createElement('option'); o.value = a; o.textContent = a; ciAgent.appendChild(o);
         });
+        amsLockAgentField(ciAgent);
     }
 }
 
@@ -569,11 +605,12 @@ function amsOpenAddPolicyModal() {
     const fields = ['mp_agent','mp_policyType','mp_lob','mp_carrier','mp_mga','mp_policyNum','mp_binderNum','mp_premium','mp_payType','mp_effDate','mp_expDate'];
     fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
-    // Pre-select current user if agent
+    // Pre-select current user if agent, then lock the field
     if (amsCurrentRole === 'agent') {
         const agSel = document.getElementById('mp_agent');
         if (agSel) agSel.value = amsCurrentUser;
     }
+    amsLockAgentField(document.getElementById('mp_agent'));
 
     document.getElementById('amsPolicyModal').classList.add('open');
     lucide.createIcons();
@@ -605,6 +642,7 @@ function amsEditPolicy(policyId) {
         if (el) el.value = entry[field] || '';
     });
 
+    amsLockAgentField(document.getElementById('mp_agent'));
     document.getElementById('amsPolicyModal').classList.add('open');
     lucide.createIcons();
 }
