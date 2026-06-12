@@ -1636,6 +1636,115 @@ function clientLookupSelect(name) {
     if (clearBtn) clearBtn.value = name;
 }
 
+// ── Customer Name Autocomplete (BinderBook + AMS) ─────────────
+
+let _cnDropdownIndex = -1;
+
+function customerNameAutocomplete(query) {
+    const dd = document.getElementById('customerNameDropdown');
+    if (!dd) return;
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) { dd.style.display = 'none'; return; }
+
+    // --- BinderBook matches ---
+    const bbMatches = {};
+    (allData || []).forEach(e => {
+        const name = (e.customerName || '').trim();
+        if (name.toLowerCase().includes(q)) {
+            if (!bbMatches[name]) bbMatches[name] = [];
+            bbMatches[name].push(e);
+        }
+    });
+
+    // --- AMS matches ---
+    const amsContacts = JSON.parse(localStorage.getItem('amsClientData') || '{}');
+    const amsMatches  = {};
+    Object.entries(amsContacts).forEach(([key, contact]) => {
+        const name = contact.name || contact.displayName || key;
+        if (name.toLowerCase().includes(q)) {
+            amsMatches[name] = contact;
+        }
+    });
+
+    // Merge: start with BinderBook names, add AMS-only names
+    const allNames = new Map();
+    Object.keys(bbMatches).forEach(n => allNames.set(n, { bb: bbMatches[n], ams: null }));
+    Object.keys(amsMatches).forEach(n => {
+        const key = n;
+        if (allNames.has(key)) { allNames.get(key).ams = amsMatches[n]; }
+        else allNames.set(key, { bb: null, ams: amsMatches[n] });
+    });
+
+    if (allNames.size === 0) { dd.style.display = 'none'; return; }
+
+    _cnDropdownIndex = -1;
+    const items = [...allNames.entries()].slice(0, 10);
+    dd.innerHTML = items.map(([name, src], i) => {
+        const bbCount  = src.bb ? src.bb.length : 0;
+        const latest   = src.bb ? src.bb.sort((a,b)=>(b.entryDate||'').localeCompare(a.entryDate||''))[0] : null;
+        const lob      = latest?.lineOfBusiness || '';
+        const agent    = latest?.agent || '';
+        const badges   = [];
+        if (bbCount > 0) badges.push(`<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;">📋 ${bbCount} ${bbCount===1?'policy':'policies'}</span>`);
+        if (src.ams)     badges.push(`<span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;">🏢 AMS</span>`);
+        const sub = [lob, agent].filter(Boolean).join(' · ');
+        return `<div class="cn-dd-item" data-name="${name.replace(/"/g,'&quot;')}" data-index="${i}"
+            onclick="customerNameSelect('${name.replace(/'/g,"\\'")}') "
+            onmouseenter="customerNameDropdownHighlight(${i})"
+            style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div style="min-width:0;">
+                <div style="font-size:14px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                ${sub ? `<div style="font-size:11px;color:#64748b;margin-top:1px;">${sub}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:5px;flex-shrink:0;">${badges.join('')}</div>
+        </div>`;
+    }).join('');
+
+    dd.style.display = 'block';
+}
+
+function customerNameSelect(name) {
+    const inp = document.getElementById('customerName');
+    if (inp) { inp.value = name; inp.dispatchEvent(new Event('input')); }
+    customerNameDropdownHide();
+    // Also sync the existing lookup bar
+    const lu = document.getElementById('clientLookupInput');
+    if (lu) { lu.value = name; clientLookupSearch(name); }
+}
+
+function customerNameDropdownHide() {
+    const dd = document.getElementById('customerNameDropdown');
+    if (dd) dd.style.display = 'none';
+    _cnDropdownIndex = -1;
+}
+
+function customerNameDropdownHighlight(index) {
+    _cnDropdownIndex = index;
+    document.querySelectorAll('.cn-dd-item').forEach((el, i) => {
+        el.style.background = i === index ? '#eff6ff' : '';
+    });
+}
+
+function customerNameDropdownKeyNav(e) {
+    const items = document.querySelectorAll('.cn-dd-item');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _cnDropdownIndex = Math.min(_cnDropdownIndex + 1, items.length - 1);
+        customerNameDropdownHighlight(_cnDropdownIndex);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _cnDropdownIndex = Math.max(_cnDropdownIndex - 1, 0);
+        customerNameDropdownHighlight(_cnDropdownIndex);
+    } else if (e.key === 'Enter' && _cnDropdownIndex >= 0) {
+        e.preventDefault();
+        const name = items[_cnDropdownIndex]?.dataset?.name;
+        if (name) customerNameSelect(name);
+    } else if (e.key === 'Escape') {
+        customerNameDropdownHide();
+    }
+}
+
 function clientLookupClear() {
     const inp = document.getElementById('clientLookupInput');
     const res = document.getElementById('clientLookupResults');
