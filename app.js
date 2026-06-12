@@ -1510,6 +1510,74 @@ function sourceDropdownChanged(sel) {
     }
 }
 
+// ── Edit Modal: Source + Referral ＋ buttons ──────────────────
+
+function editSourceDropdownChanged(sel) {
+    if (sel.value === '__add_new__') {
+        sel.value = '';
+        openEditAddSourceModal();
+    }
+}
+
+function openEditAddSourceModal() {
+    const row = document.getElementById('editNewSourceRow');
+    const inp = document.getElementById('editNewSourceInput');
+    if (row) { row.style.display = 'block'; }
+    if (inp) { inp.value = ''; inp.focus(); }
+}
+
+function cancelEditNewSource() {
+    const row = document.getElementById('editNewSourceRow');
+    if (row) row.style.display = 'none';
+}
+
+function saveEditNewSource() {
+    const inp = document.getElementById('editNewSourceInput');
+    const val = (inp?.value || '').trim();
+    if (!val) { inp?.focus(); return; }
+    const customs = getCustomSources();
+    const all = [...DEFAULT_SOURCES, ...customs];
+    if (!all.map(s => s.toLowerCase()).includes(val.toLowerCase())) {
+        customs.push(val);
+        saveCustomSources(customs);
+    }
+    populateSourceDropdown('editSource', val);
+    cancelEditNewSource();
+}
+
+function openEditAddReferralModal() {
+    const row = document.getElementById('editNewReferralRow');
+    const inp = document.getElementById('editNewReferralInput');
+    if (row) { row.style.display = 'block'; }
+    if (inp) { inp.value = ''; inp.focus(); }
+}
+
+function cancelEditNewReferral() {
+    const row = document.getElementById('editNewReferralRow');
+    if (row) row.style.display = 'none';
+}
+
+function saveEditNewReferral() {
+    const inp = document.getElementById('editNewReferralInput');
+    const val = (inp?.value || '').trim();
+    if (!val) { inp?.focus(); return; }
+    const customs = getCustomReferrals();
+    if (!customs.map(r => r.toLowerCase()).includes(val.toLowerCase())) {
+        customs.push(val);
+        saveCustomReferrals(customs);
+    }
+    populateEditReferralDropdown(val);
+    cancelEditNewReferral();
+}
+
+function populateEditReferralDropdown(selectedValue) {
+    const sel = document.getElementById('editReferredBy');
+    if (!sel) return;
+    const customs = getCustomReferrals();
+    sel.innerHTML = '<option value="">— None —</option>' +
+        customs.map(r => `<option value="${r}"${r === selectedValue ? ' selected' : ''}>${r}</option>`).join('');
+}
+
 function openAddSourceModal() {
     const row = document.getElementById('newSourceRow');
     const inp = document.getElementById('newSourceInput');
@@ -2160,6 +2228,10 @@ function openEditModal(id) {
     const entry = allData.find(d => d.id === id);
     if (!entry) return;
     refreshAllCarrierDropdowns(); // ensure options are current before setting value
+    populateSourceDropdown('editSource', entry.source || '');
+    populateEditReferralDropdown(entry.referredBy || '');
+    cancelEditNewSource();
+    cancelEditNewReferral();
     document.getElementById('editCustomerName').value = entry.customerName || '';
     document.getElementById('editSource').value = entry.source || '';
     document.getElementById('editPolicyType').value = entry.policyType || '';
@@ -2192,6 +2264,7 @@ function updateEntry() {
     if (!entry) return;
     entry.customerName = document.getElementById('editCustomerName').value;
     entry.source = document.getElementById('editSource').value;
+    entry.referredBy = document.getElementById('editReferredBy').value;
     entry.policyType = document.getElementById('editPolicyType').value;
     entry.lineOfBusiness = document.getElementById('editLineOfBusiness').value;
     entry.company = document.getElementById('editCompany').value;

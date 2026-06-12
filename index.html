@@ -2407,17 +2407,37 @@
                     </div>
                     <div class="form-group">
                         <label>Source</label>
-                        <select id="editSource">
-                            <option value="">Select Source</option>
-                            <option value="Referral">Referral</option>
-                            <option value="Walk-In">Walk-In</option>
-                            <option value="Online">Online</option>
-                            <option value="Phone">Phone</option>
-                            <option value="Repeat Client">Repeat Client</option>
-                            <option value="Social Media">Social Media</option>
-                            <option value="Agent Referral">Agent Referral</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select id="editSource" onchange="editSourceDropdownChanged(this)" style="flex:1;"></select>
+                            <button type="button" onclick="openEditAddSourceModal()" title="Add new source"
+                                style="flex-shrink:0;padding:7px 10px;background:linear-gradient(to right,#0f2a78,#2563eb);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;">＋</button>
+                        </div>
+                        <div id="editNewSourceRow" style="display:none;margin-top:6px;">
+                            <input type="text" id="editNewSourceInput" placeholder="Type new source name…"
+                                style="width:100%;padding:7px 10px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();saveEditNewSource();}">
+                            <div style="display:flex;gap:6px;margin-top:5px;">
+                                <button type="button" onclick="saveEditNewSource()" class="btn-primary btn-sm" style="flex:1;">✓ Save Source</button>
+                                <button type="button" onclick="cancelEditNewSource()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Referred By</label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select id="editReferredBy" style="flex:1;"></select>
+                            <button type="button" onclick="openEditAddReferralModal()" title="Add new referral"
+                                style="flex-shrink:0;padding:7px 10px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;">＋</button>
+                        </div>
+                        <div id="editNewReferralRow" style="display:none;margin-top:6px;">
+                            <input type="text" id="editNewReferralInput" placeholder="Type referral name…"
+                                style="width:100%;padding:7px 10px;border:1px solid #86efac;border-radius:6px;font-size:13px;"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();saveEditNewReferral();}">
+                            <div style="display:flex;gap:6px;margin-top:5px;">
+                                <button type="button" onclick="saveEditNewReferral()" class="btn-primary btn-sm" style="flex:1;">✓ Save</button>
+                                <button type="button" onclick="cancelEditNewReferral()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Policy Type</label>
@@ -2979,7 +2999,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260612c"></script>
-    <script src="app.js?v=20260612c"></script>
+    <script src="motion.js?v=20260612d"></script>
+    <script src="app.js?v=20260612d"></script>
 </body>
 </html>
