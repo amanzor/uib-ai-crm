@@ -6743,6 +6743,130 @@ async function claudeInlineSendMessage() {
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(claudeInlineGreet, 800);
     setTimeout(claudeAdminGreet, 800);
+    setTimeout(claudeSetupDragDrop, 1000);
+});
+
+// ── Drag-and-Drop support for both chat sections ──
+
+function claudeSetupDragDrop() {
+    const inline = document.getElementById('claudeInlineSection');
+    const admin  = document.getElementById('claudeAdminSection');
+    if (inline) claudeAttachDropZone(inline, 'agent');
+    if (admin)  claudeAttachDropZone(admin, 'admin');
+}
+
+function claudeAttachDropZone(zone, mode) {
+    const origBg = zone.style.background;
+    const origBorder = zone.style.borderColor || '#f5c19a';
+
+    const setActive = () => {
+        zone.style.background = 'linear-gradient(135deg,#fde4cc,#fbcfa6)';
+        zone.style.borderColor = '#D97757';
+        zone.style.borderStyle = 'dashed';
+        zone.style.borderWidth = '2.5px';
+        zone.style.boxShadow = '0 0 0 4px rgba(217,119,87,.18)';
+    };
+    const reset = () => {
+        zone.style.background = origBg;
+        zone.style.borderColor = origBorder;
+        zone.style.borderStyle = 'solid';
+        zone.style.borderWidth = '1.5px';
+        zone.style.boxShadow = '';
+    };
+
+    // Counter so dragenter/dragleave on children doesn't cause flicker
+    let depth = 0;
+
+    zone.addEventListener('dragenter', (e) => {
+        if (!claudeDragHasFiles(e)) return;
+        e.preventDefault();
+        depth++;
+        if (depth === 1) setActive();
+    });
+
+    zone.addEventListener('dragover', (e) => {
+        if (!claudeDragHasFiles(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    zone.addEventListener('dragleave', (e) => {
+        if (!claudeDragHasFiles(e)) return;
+        depth--;
+        if (depth <= 0) { depth = 0; reset(); }
+    });
+
+    zone.addEventListener('drop', (e) => {
+        if (!claudeDragHasFiles(e)) return;
+        e.preventDefault();
+        depth = 0;
+        reset();
+
+        const files = Array.from(e.dataTransfer.files || []);
+        const pdfs = files.filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+        const skipped = files.length - pdfs.length;
+
+        if (pdfs.length === 0) {
+            if (mode === 'agent') {
+                claudeInlineAddMessage('assistant', '⚠️ Please drop a PDF file. Other file types are not supported.');
+            } else {
+                claudeAdminAddMessage('assistant', '⚠️ Please drop PDF files. Other file types are not supported.');
+            }
+            return;
+        }
+
+        if (mode === 'agent') {
+            // Agent inline supports only one PDF at a time — take the first
+            const file = pdfs[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const base64 = ev.target.result.split(',')[1];
+                _claudeInlinePendingPdf = { name: file.name, base64 };
+                const preview = document.getElementById('claudeInlineFilePreview');
+                preview.style.display = 'block';
+                preview.innerHTML = `📎 <strong>${file.name}</strong> attached — click Send to extract the sales entry.` +
+                    (pdfs.length > 1 ? ` <em>(${pdfs.length - 1} other PDF${pdfs.length > 2 ? 's' : ''} ignored — only one at a time here)</em>` : '');
+                document.getElementById('claudeInlineInput')?.focus();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Admin section supports multiple PDFs
+            let loaded = 0;
+            pdfs.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const base64 = ev.target.result.split(',')[1];
+                    _claudeAdminPendingPdfs.push({ name: file.name, base64 });
+                    loaded++;
+                    if (loaded === pdfs.length) {
+                        claudeAdminRefreshPreview();
+                        document.getElementById('claudeAdminInput')?.focus();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            if (skipped > 0) {
+                claudeAdminAddMessage('assistant', `ℹ️ ${pdfs.length} PDF${pdfs.length > 1 ? 's' : ''} added. (${skipped} non-PDF file${skipped > 1 ? 's' : ''} skipped.)`);
+            }
+        }
+    });
+}
+
+function claudeDragHasFiles(e) {
+    if (!e.dataTransfer) return false;
+    const types = e.dataTransfer.types;
+    if (!types) return false;
+    for (let i = 0; i < types.length; i++) {
+        if (types[i] === 'Files') return true;
+    }
+    return false;
+}
+
+// Prevent the browser from navigating away when a user drops outside the zones
+['dragover', 'drop'].forEach(evt => {
+    window.addEventListener(evt, (e) => {
+        if (claudeDragHasFiles(e)) e.preventDefault();
+    });
 });
 
 // ============================================================
