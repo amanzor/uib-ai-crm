@@ -1196,7 +1196,6 @@
                     <button class="btn-purple btn-sm" onclick="openDailyVerificationModal()"><i data-lucide="file-check"></i> Verification Log</button>
                     <button class="btn-sm" onclick="window.open('ams.html','_blank')" style="background:linear-gradient(135deg,#0d1f3c,#1d4ed8);color:#fff;border:none;"><i data-lucide="building-2"></i> AMS</button>
                     <button class="btn-sm" onclick="showProductionDashboard()" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;"><i data-lucide="bar-chart-2"></i> Production</button>
-                    <button class="btn-sm" onclick="claudeOpenPanel()" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;"><i data-lucide="sparkles"></i> AI Assistant</button>
                     <button class="btn-danger btn-sm" onclick="logout()"><i data-lucide="log-out"></i> Logout</button>
                 </div>
 
@@ -1560,6 +1559,31 @@
                     <!-- Results -->
                     <div id="agentGlobalSearchResults" style="margin-top:10px;"></div>
                 </div>
+
+                <!-- ── Claude AI Assistant (inline section) ── -->
+                <div style="margin:18px 0 0 0;background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1.5px solid #ddd6fe;border-radius:14px;padding:18px 20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>
+                            <span style="font-size:14px;font-weight:700;color:#6d28d9;">Claude AI Assistant</span>
+                            <span style="font-size:12px;color:#7c3aed;font-style:italic;">— ask anything, or upload a PDF policy</span>
+                        </div>
+                        <button onclick="claudeInlineNewConversation()" style="background:#fff;border:1px solid #c4b5fd;color:#7c3aed;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">+ New chat</button>
+                    </div>
+                    <div id="claudeInlineMessages" style="background:#fff;border:1px solid #e9d5ff;border-radius:10px;min-height:120px;max-height:480px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;font-size:14px;"></div>
+                    <div id="claudeInlineFilePreview" style="display:none;margin-top:8px;padding:8px 12px;background:#ede9fe;border:1px solid #ddd6fe;border-radius:8px;font-size:12px;color:#5b21b6;"></div>
+                    <div style="display:flex;gap:8px;align-items:flex-end;margin-top:10px;">
+                        <button onclick="document.getElementById('claudeInlinePdfInput').click()" title="Upload PDF policy doc"
+                            style="flex-shrink:0;background:#fff;border:1.5px solid #c4b5fd;color:#7c3aed;width:42px;height:42px;border-radius:10px;cursor:pointer;font-size:18px;">📎</button>
+                        <input type="file" id="claudeInlinePdfInput" accept="application/pdf" style="display:none;" onchange="claudeInlineHandlePdfUpload(event)">
+                        <textarea id="claudeInlineInput" placeholder="Ask anything, or attach a PDF policy doc…" rows="2"
+                            style="flex:1;border:1.5px solid #c4b5fd;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;resize:none;outline:none;background:#fff;"
+                            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();claudeInlineSendMessage();}"></textarea>
+                        <button onclick="claudeInlineSendMessage()" id="claudeInlineSendBtn"
+                            style="flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;padding:0 18px;height:42px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px;">Send</button>
+                    </div>
+                </div>
+                <!-- /Claude AI Assistant -->
 
                 <div>
                     <h3 style="color: #333; margin: 30px 0 20px 0; font-size: 1.3em;">📊 Your Submissions</h3>
@@ -3003,49 +3027,12 @@
         </div>
     </div>
 
-    <!-- ─── Claude AI Chat — Floating Bubble & Panel ─── -->
-    <button id="claudeBubbleBtn" onclick="claudeOpenPanel()" title="Ask Claude AI"
-        style="display:none;position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;box-shadow:0 8px 24px rgba(124,58,237,.45);cursor:pointer;z-index:9998;align-items:center;justify-content:center;font-size:24px;transition:transform .2s;"
-        onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>
-    </button>
-
-    <div id="claudeChatPanel" style="display:none;position:fixed;top:0;right:0;width:480px;max-width:100vw;height:100vh;background:#fff;box-shadow:-8px 0 28px rgba(0,0,0,.18);z-index:9999;flex-direction:column;">
-        <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>
-                <div>
-                    <div style="font-weight:700;font-size:15px;">Claude AI</div>
-                    <div style="font-size:11px;opacity:.85;">UIB Assistant</div>
-                </div>
-            </div>
-            <div style="display:flex;gap:6px;">
-                <button onclick="claudeNewConversation()" title="New chat" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">+ New</button>
-                <button onclick="claudeClosePanel()" title="Close" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;">✕</button>
-            </div>
-        </div>
-        <div id="claudeChatMessages" style="flex:1;overflow-y:auto;padding:18px;background:#f9fafb;display:flex;flex-direction:column;gap:14px;"></div>
-        <div id="claudeFilePreview" style="display:none;padding:8px 14px;background:#ede9fe;border-top:1px solid #ddd6fe;font-size:12px;color:#5b21b6;"></div>
-        <div style="padding:12px 14px;background:#fff;border-top:1px solid #e5e7eb;">
-            <div style="display:flex;gap:8px;align-items:flex-end;">
-                <button onclick="document.getElementById('claudePdfInput').click()" title="Upload PDF to extract sales entry"
-                    style="flex-shrink:0;background:#ede9fe;color:#7c3aed;border:none;width:38px;height:38px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">📎</button>
-                <input type="file" id="claudePdfInput" accept="application/pdf" style="display:none;" onchange="claudeHandlePdfUpload(event)">
-                <textarea id="claudeChatInput" placeholder="Ask anything, or attach a PDF policy doc…" rows="2"
-                    style="flex:1;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;resize:none;outline:none;"
-                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();claudeSendMessage();}"></textarea>
-                <button onclick="claudeSendMessage()" id="claudeSendBtn"
-                    style="flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;padding:0 16px;height:38px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Send</button>
-            </div>
-            <div style="font-size:10px;color:#9ca3af;text-align:center;margin-top:6px;">Powered by Claude Opus 4.8 · Routed via Google Apps Script</div>
-        </div>
-    </div>
-    <!-- ─── /Claude Chat ─── -->
+    <!-- Claude AI chat now lives inline as a section in the agent portal -->
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260615b"></script>
-    <script src="app.js?v=20260615b"></script>
+    <script src="motion.js?v=20260615c"></script>
+    <script src="app.js?v=20260615c"></script>
 </body>
 </html>

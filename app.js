@@ -6538,12 +6538,128 @@ function claudeUpdateBubbleVisibility() {
     else claudeHideBubble();
 }
 
-// Hook into showSection if available
-(function wrapShowSection() {
-    if (typeof window.showSection !== 'function') return;
-    const orig = window.showSection;
-    window.showSection = function(id) {
-        orig.call(this, id);
-        setTimeout(claudeUpdateBubbleVisibility, 50);
+// ── Inline chat (lives below the universal search section) ──
+
+let _claudeInlineMessages = [];
+let _claudeInlinePendingPdf = null;
+let _claudeInlineBusy = false;
+
+function claudeInlineAddMessage(role, text, isHtml) {
+    const box = document.getElementById('claudeInlineMessages');
+    if (!box) return null;
+    const isUser = role === 'user';
+    const div = document.createElement('div');
+    div.style.cssText = `align-self:${isUser ? 'flex-end' : 'flex-start'};max-width:88%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;${isUser ? 'background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;' : 'background:#f9fafb;color:#1f2937;border:1px solid #e5e7eb;'};word-wrap:break-word;white-space:pre-wrap;`;
+    if (isHtml) div.innerHTML = text;
+    else div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+}
+
+function claudeInlineGreet() {
+    const box = document.getElementById('claudeInlineMessages');
+    if (!box || box.children.length > 0) return;
+    claudeInlineAddMessage('assistant', `👋 Hi ${currentUser || 'there'}! Ask me anything about your binder data, or upload a PDF policy doc and I'll extract the sales entry for you.`);
+}
+
+function claudeInlineNewConversation() {
+    _claudeInlineMessages = [];
+    _claudeInlinePendingPdf = null;
+    const box = document.getElementById('claudeInlineMessages');
+    if (box) box.innerHTML = '';
+    const preview = document.getElementById('claudeInlineFilePreview');
+    if (preview) preview.style.display = 'none';
+    claudeInlineGreet();
+}
+
+function claudeInlineHandlePdfUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+        alert('Please upload a PDF file.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const base64 = e.target.result.split(',')[1];
+        _claudeInlinePendingPdf = { name: file.name, base64 };
+        const preview = document.getElementById('claudeInlineFilePreview');
+        preview.style.display = 'block';
+        preview.innerHTML = `📎 <strong>${file.name}</strong> attached — click Send to extract the sales entry.`;
+        document.getElementById('claudeInlineInput').focus();
     };
-})();
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+async function claudeInlineSendMessage() {
+    if (_claudeInlineBusy) return;
+    const input = document.getElementById('claudeInlineInput');
+    let userText = (input?.value || '').trim();
+    const hasPdf = _claudeInlinePendingPdf !== null;
+
+    if (!userText && !hasPdf) return;
+    if (!userText && hasPdf) userText = 'Extract the sales entry data from this PDF and create a new entry for me.';
+
+    let displayText = userText;
+    if (hasPdf) displayText = `📎 ${_claudeInlinePendingPdf.name}\n${userText}`;
+    claudeInlineAddMessage('user', displayText);
+    input.value = '';
+    document.getElementById('claudeInlineFilePreview').style.display = 'none';
+
+    const content = [];
+    if (hasPdf) {
+        content.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: _claudeInlinePendingPdf.base64 }
+        });
+    }
+    content.push({ type: 'text', text: userText });
+
+    const pdfWasAttached = hasPdf;
+    const pdfFileName = hasPdf ? _claudeInlinePendingPdf.name : null;
+    _claudeInlineMessages.push({ role: 'user', content });
+    _claudeInlinePendingPdf = null;
+
+    _claudeInlineBusy = true;
+    const sendBtn = document.getElementById('claudeInlineSendBtn');
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '…'; }
+    const loadingDiv = claudeInlineAddMessage('assistant', '✨ Thinking…');
+
+    try {
+        const systemPrompt = claudeBuildSystemPrompt(pdfWasAttached);
+        const reply = await claudeCallAPI(systemPrompt, _claudeInlineMessages);
+
+        loadingDiv.remove();
+        const replyText = reply.text || '(no response)';
+        _claudeInlineMessages.push({ role: 'assistant', content: replyText });
+
+        const extracted = pdfWasAttached ? claudeTryParseEntry(replyText) : null;
+        if (extracted) {
+            const msg = claudeInlineAddMessage('assistant', '');
+            msg.innerHTML = claudeRenderMarkdown(replyText) +
+                `<div style="margin-top:14px;padding:12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;">
+                    <div style="font-weight:700;color:#15803d;margin-bottom:8px;">✓ Sales entry extracted</div>
+                    <div style="font-size:12px;color:#166534;margin-bottom:10px;">PDF: ${pdfFileName}</div>
+                    <button onclick='claudePrefillEntry(${JSON.stringify(extracted).replace(/'/g, "&#39;")})'
+                        style="background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">
+                        📋 Open Daily Sales Entry with these values
+                    </button>
+                </div>`;
+        } else {
+            claudeInlineAddMessage('assistant', claudeRenderMarkdown(replyText), true);
+        }
+    } catch (err) {
+        loadingDiv.remove();
+        claudeInlineAddMessage('assistant', `❌ Error: ${err.message}\n\nMake sure the Google Apps Script has been updated with the Claude proxy.`);
+    } finally {
+        _claudeInlineBusy = false;
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
+    }
+}
+
+// Auto-greet on agent section load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(claudeInlineGreet, 800);
+});
