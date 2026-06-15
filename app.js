@@ -889,6 +889,8 @@ function saveEntry() {
         effDate: document.getElementById('effDate').value,
         term: document.getElementById('term').value,
         location: document.getElementById('salesLocationSelect')?.value || _selectedSalesLocation || '',
+        drivers: collectDriverRows(),
+        vehicles: collectVehicleRows(),
         timestamp: getEasternTimestamp()
     };
     entry.agentCommissionShare = parseFloat(((entry.agencyFee + entry.agencyCommission) * 0.5).toFixed(2));
@@ -1465,6 +1467,7 @@ function openDailySalesModal() {
     generateBinderNumber();
     refreshAllCarrierDropdowns();
     populateSourceDropdown('source', '');
+    resetDriversVehicles();
     const m = document.getElementById('dailySalesModal');
     m.classList.add('active');
     if (window.UIBMotion) UIBMotion.animateModalOpen(m);
@@ -7239,4 +7242,135 @@ function claudeAdminApplyStatement(stmt) {
 
     alert(`✓ Saved commission statement: ${key}\n\nView it under "Commission Statements" in the admin dashboard.`);
     if (typeof loadCommissionStatementsList === 'function') loadCommissionStatementsList();
+}
+
+// ============================================================
+// DRIVERS & VEHICLES — dynamic mini-sections in Daily Sales Entry
+// ============================================================
+
+let _driverRowCounter = 0;
+let _vehicleRowCounter = 0;
+
+function addDriverRow(prefill) {
+    const container = document.getElementById('driversContainer');
+    if (!container) return;
+    _driverRowCounter++;
+    const rid = `drv_${_driverRowCounter}`;
+    const div = document.createElement('div');
+    div.className = 'driver-row';
+    div.dataset.rid = rid;
+    div.style.cssText = 'background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;';
+    div.innerHTML = `
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">First Name</label>
+            <input type="text" class="drv-firstName" placeholder="John" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">Last Name</label>
+            <input type="text" class="drv-lastName" placeholder="Doe" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">Date of Birth</label>
+            <input type="date" class="drv-dob" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">DL #</label>
+            <input type="text" class="drv-dl" placeholder="License #" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <button type="button" onclick="this.closest('.driver-row').remove()" title="Remove driver"
+            style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:700;font-size:14px;height:32px;">✕</button>
+    `;
+    container.appendChild(div);
+    if (prefill) {
+        if (prefill.firstName) div.querySelector('.drv-firstName').value = prefill.firstName;
+        if (prefill.lastName)  div.querySelector('.drv-lastName').value  = prefill.lastName;
+        if (prefill.dob)       div.querySelector('.drv-dob').value       = prefill.dob;
+        if (prefill.dl)        div.querySelector('.drv-dl').value        = prefill.dl;
+    }
+    div.querySelector('.drv-firstName')?.focus();
+}
+
+function addVehicleRow(prefill) {
+    const container = document.getElementById('vehiclesContainer');
+    if (!container) return;
+    _vehicleRowCounter++;
+    const rid = `veh_${_vehicleRowCounter}`;
+    const div = document.createElement('div');
+    div.className = 'vehicle-row';
+    div.dataset.rid = rid;
+    div.style.cssText = 'background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:80px 1fr 1fr 1.6fr auto;gap:8px;align-items:end;';
+    div.innerHTML = `
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#9a3412;display:block;margin-bottom:3px;text-transform:uppercase;">Year</label>
+            <input type="number" class="veh-year" min="1900" max="2099" placeholder="2024" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#9a3412;display:block;margin-bottom:3px;text-transform:uppercase;">Make</label>
+            <input type="text" class="veh-make" placeholder="Toyota" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#9a3412;display:block;margin-bottom:3px;text-transform:uppercase;">Model</label>
+            <input type="text" class="veh-model" placeholder="Camry" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:#9a3412;display:block;margin-bottom:3px;text-transform:uppercase;">VIN</label>
+            <input type="text" class="veh-vin" placeholder="17-character VIN" maxlength="17" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:monospace;text-transform:uppercase;box-sizing:border-box;">
+        </div>
+        <button type="button" onclick="this.closest('.vehicle-row').remove()" title="Remove vehicle"
+            style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:700;font-size:14px;height:32px;">✕</button>
+    `;
+    container.appendChild(div);
+    if (prefill) {
+        if (prefill.year)  div.querySelector('.veh-year').value  = prefill.year;
+        if (prefill.make)  div.querySelector('.veh-make').value  = prefill.make;
+        if (prefill.model) div.querySelector('.veh-model').value = prefill.model;
+        if (prefill.vin)   div.querySelector('.veh-vin').value   = prefill.vin;
+    }
+    div.querySelector('.veh-year')?.focus();
+}
+
+function collectDriverRows() {
+    const rows = document.querySelectorAll('#driversContainer .driver-row');
+    const drivers = [];
+    rows.forEach(r => {
+        const driver = {
+            firstName: r.querySelector('.drv-firstName')?.value.trim() || '',
+            lastName:  r.querySelector('.drv-lastName')?.value.trim()  || '',
+            dob:       r.querySelector('.drv-dob')?.value              || '',
+            dl:        r.querySelector('.drv-dl')?.value.trim()        || ''
+        };
+        if (driver.firstName || driver.lastName || driver.dob || driver.dl) {
+            drivers.push(driver);
+        }
+    });
+    return drivers;
+}
+
+function collectVehicleRows() {
+    const rows = document.querySelectorAll('#vehiclesContainer .vehicle-row');
+    const vehicles = [];
+    rows.forEach(r => {
+        const vehicle = {
+            year:  r.querySelector('.veh-year')?.value.trim()           || '',
+            make:  r.querySelector('.veh-make')?.value.trim()           || '',
+            model: r.querySelector('.veh-model')?.value.trim()          || '',
+            vin:   r.querySelector('.veh-vin')?.value.trim().toUpperCase() || ''
+        };
+        if (vehicle.year || vehicle.make || vehicle.model || vehicle.vin) {
+            vehicles.push(vehicle);
+        }
+    });
+    return vehicles;
+}
+
+function resetDriversVehicles() {
+    const dc = document.getElementById('driversContainer');
+    const vc = document.getElementById('vehiclesContainer');
+    if (dc) dc.innerHTML = '';
+    if (vc) vc.innerHTML = '';
+    _driverRowCounter = 0;
+    _vehicleRowCounter = 0;
+    // Start with one empty row of each so users see the structure
+    addDriverRow();
+    addVehicleRow();
 }
