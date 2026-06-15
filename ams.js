@@ -68,8 +68,9 @@ const AMS_LOBS = [
     "Commercial Auto","Commercial Property","Excess Liability","Flood",
     "Garage Keepers","General Liability","Home Owners DP1","Home Owners DP2",
     "Home Owners DP3","Home Owners H3","Home Owners H4","Home Owners H6",
-    "Home Owners H8","Inland Marine","Motorcycle/ATV","Personal Auto",
-    "Professional Liability","Surety Bond","Trucking","Umbrella","Workers Comp"
+    "Home Owners H8","Inland Marine","Motorcycle/ATV","Non-Trucking Liability",
+    "Personal Auto","Pollution Liability","Professional Liability","Surety Bond",
+    "Trucking","Umbrella","Workers Comp"
 ];
 
 const AMS_ADMIN_PASSWORD = 'admin2024';
