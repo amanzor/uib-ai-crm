@@ -1303,105 +1303,127 @@
                                 <input type="text" id="referredBy" placeholder="Name of referrer" required>
                             </div>
 
-                            <div class="form-group">
-                                <label>Policy Type *</label>
-                                <select id="policyType" required>
-                                    <option value="">Select Type</option>
-                                    <option value="New">New</option>
-                                    <option value="Rewrite">Rewrite</option>
-                                    <option value="Renew A-B">Renew A-B</option>
-                                    <option value="Renewal">Renewal</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Line of Business *</label>
-                                <select id="lineOfBusiness" required>
-                                    <option value="">Select Line</option>
-                                    <option value="BOP">BOP</option>
-                                    <option value="Boat">Boat</option>
-                                    <option value="Builders Risk">Builders Risk</option>
-                                    <option value="Business Owner">Business Owner</option>
-                                    <option value="Classic Collectors">Classic Collectors</option>
-                                    <option value="Commercial Auto">Commercial Auto</option>
-                                    <option value="Commercial Property">Commercial Property</option>
-                                    <option value="Excess Liability">Excess Liability</option>
-                                    <option value="Flood">Flood</option>
-                                    <option value="Garage Keepers">Garage Keepers</option>
-                                    <option value="General Liability">General Liability</option>
-                                    <option value="Home Owners DP1">Home Owners DP1</option>
-                                    <option value="Home Owners DP2">Home Owners DP2</option>
-                                    <option value="Home Owners DP3">Home Owners DP3</option>
-                                    <option value="Home Owners H3">Home Owners H3</option>
-                                    <option value="Home Owners H4">Home Owners H4</option>
-                                    <option value="Home Owners H6">Home Owners H6</option>
-                                    <option value="Home Owners H8">Home Owners H8</option>
-                                    <option value="Inland Marine">Inland Marine</option>
-                                    <option value="Motorcycle/ATV">Motorcycle/ATV</option>
-                                    <option value="Personal Auto">Personal Auto</option>
-                                    <option value="Professional Liability">Professional Liability</option>
-                                    <option value="Surety Bond">Surety Bond</option>
-                                    <option value="Trucking">Trucking</option>
-                                    <option value="Umbrella">Umbrella</option>
-                                    <option value="Workers Comp">Workers Comp</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label style="display:flex;justify-content:space-between;align-items:center;">
-                                    <span>Insurance Company *</span>
-                                    <button type="button" class="btn-success btn-sm" onclick="openAddCarrierModal('company')" style="padding:3px 10px;font-size:12px;"><i data-lucide="plus-circle"></i> Add Carrier</button>
-                                </label>
-                                <select id="company" required>
-                                    <option value="">Select Company</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>MGA / Premium Finance</label>
-                                <select id="mga">
-                                    <option value="">Select MGA (Optional)</option>
-                                    <option value="5Star">5Star</option>
-                                    <option value="ACI-Ascendant">ACI-Ascendant</option>
-                                    <option value="All Risk">All Risk</option>
-                                    <option value="Appalachian">Appalachian</option>
-                                    <option value="Bass Underwriters">Bass Underwriters</option>
-                                    <option value="FastComp">FastComp</option>
-                                    <option value="Hiscox-London">Hiscox-London</option>
-                                    <option value="Hull&Co">Hull&Co</option>
-                                    <option value="London Underwriters">London Underwriters</option>
-                                    <option value="MJ Kelly">MJ Kelly</option>
-                                    <option value="Phyladelphia">Phyladelphia</option>
-                                    <option value="SCU">SCU</option>
-                                    <option value="Security Underwriters">Security Underwriters</option>
-                                    <option value="Shelly Middle Brooks">Shelly Middle Brooks</option>
-                                    <option value="Surety One">Surety One</option>
-                                    <option value="Tapco">Tapco</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Policy Number</label>
-                                <input type="text" id="policyNumber">
-                            </div>
-                            <div class="form-group">
-                                <label>Binder Number (Auto-Generated)</label>
-                                <input type="text" id="binderNumber" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
-                            </div>
-                            <div class="form-group">
-                                <label>Entry Date &amp; Time <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(auto-timestamped)</span></label>
-                                <input type="text" id="entryDateDisplay" readonly
-                                    style="background:#f0f0f0;cursor:not-allowed;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;width:100%;box-sizing:border-box;color:var(--gray-700);"
-                                    placeholder="Opening form…">
-                                <input type="hidden" id="entryDate">
-                            </div>
-                            <div class="form-group">
-                                <label>Effective Date *</label>
-                                <input type="date" id="effDate" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Term (Months) *</label>
-                                <select id="term" required>
-                                    <option value="">Select Term</option>
-                                    <option value="6">6 Months</option>
-                                    <option value="12">12 Months</option>
-                                </select>
+                        </div>
+
+                        <!-- ── Policy Section ── -->
+                        <div style="margin:14px 0 0 0;">
+                            <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:10px;padding:14px 18px;">
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #ddd6fe;">
+                                    <span style="font-size:15px;font-weight:700;color:#5b21b6;">📄 Policy Information</span>
+                                    <span style="font-size:12px;color:#7c3aed;font-style:italic;">— policy type, carrier, dates, and term</span>
+                                </div>
+
+                                <!-- Row 1: Policy Type, LOB, Carrier, MGA -->
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Policy Type *</label>
+                                        <select id="policyType" required>
+                                            <option value="">Select Type</option>
+                                            <option value="New">New</option>
+                                            <option value="Rewrite">Rewrite</option>
+                                            <option value="Renew A-B">Renew A-B</option>
+                                            <option value="Renewal">Renewal</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Line of Business *</label>
+                                        <select id="lineOfBusiness" required>
+                                            <option value="">Select Line</option>
+                                            <option value="BOP">BOP</option>
+                                            <option value="Boat">Boat</option>
+                                            <option value="Builders Risk">Builders Risk</option>
+                                            <option value="Business Owner">Business Owner</option>
+                                            <option value="Classic Collectors">Classic Collectors</option>
+                                            <option value="Commercial Auto">Commercial Auto</option>
+                                            <option value="Commercial Property">Commercial Property</option>
+                                            <option value="Excess Liability">Excess Liability</option>
+                                            <option value="Flood">Flood</option>
+                                            <option value="Garage Keepers">Garage Keepers</option>
+                                            <option value="General Liability">General Liability</option>
+                                            <option value="Home Owners DP1">Home Owners DP1</option>
+                                            <option value="Home Owners DP2">Home Owners DP2</option>
+                                            <option value="Home Owners DP3">Home Owners DP3</option>
+                                            <option value="Home Owners H3">Home Owners H3</option>
+                                            <option value="Home Owners H4">Home Owners H4</option>
+                                            <option value="Home Owners H6">Home Owners H6</option>
+                                            <option value="Home Owners H8">Home Owners H8</option>
+                                            <option value="Inland Marine">Inland Marine</option>
+                                            <option value="Motorcycle/ATV">Motorcycle/ATV</option>
+                                            <option value="Personal Auto">Personal Auto</option>
+                                            <option value="Professional Liability">Professional Liability</option>
+                                            <option value="Surety Bond">Surety Bond</option>
+                                            <option value="Trucking">Trucking</option>
+                                            <option value="Umbrella">Umbrella</option>
+                                            <option value="Workers Comp">Workers Comp</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label style="display:flex;justify-content:space-between;align-items:center;">
+                                            <span>Insurance Company *</span>
+                                            <button type="button" class="btn-success btn-sm" onclick="openAddCarrierModal('company')" style="padding:2px 8px;font-size:11px;"><i data-lucide="plus-circle"></i> Add</button>
+                                        </label>
+                                        <select id="company" required>
+                                            <option value="">Select Company</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>MGA / Premium Finance</label>
+                                        <select id="mga">
+                                            <option value="">Select MGA (Optional)</option>
+                                            <option value="5Star">5Star</option>
+                                            <option value="ACI-Ascendant">ACI-Ascendant</option>
+                                            <option value="All Risk">All Risk</option>
+                                            <option value="Appalachian">Appalachian</option>
+                                            <option value="Bass Underwriters">Bass Underwriters</option>
+                                            <option value="FastComp">FastComp</option>
+                                            <option value="Hiscox-London">Hiscox-London</option>
+                                            <option value="Hull&Co">Hull&Co</option>
+                                            <option value="London Underwriters">London Underwriters</option>
+                                            <option value="MJ Kelly">MJ Kelly</option>
+                                            <option value="Phyladelphia">Phyladelphia</option>
+                                            <option value="SCU">SCU</option>
+                                            <option value="Security Underwriters">Security Underwriters</option>
+                                            <option value="Shelly Middle Brooks">Shelly Middle Brooks</option>
+                                            <option value="Surety One">Surety One</option>
+                                            <option value="Tapco">Tapco</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Policy #, Binder # -->
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Policy Number</label>
+                                        <input type="text" id="policyNumber">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Binder Number <span style="font-size:11px;color:#7c3aed;font-weight:600;">(Auto-Generated)</span></label>
+                                        <input type="text" id="binderNumber" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Entry Date & Time, Effective Date, Term -->
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Entry Date &amp; Time <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(auto)</span></label>
+                                        <input type="text" id="entryDateDisplay" readonly
+                                            style="background:#f0f0f0;cursor:not-allowed;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;width:100%;box-sizing:border-box;color:var(--gray-700);"
+                                            placeholder="Opening form…">
+                                        <input type="hidden" id="entryDate">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Effective Date *</label>
+                                        <input type="date" id="effDate" required>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Term (Months) *</label>
+                                        <select id="term" required>
+                                            <option value="">Select Term</option>
+                                            <option value="6">6 Months</option>
+                                            <option value="12">12 Months</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -3109,7 +3131,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260615n"></script>
-    <script src="app.js?v=20260615n"></script>
+    <script src="motion.js?v=20260615o"></script>
+    <script src="app.js?v=20260615o"></script>
 </body>
 </html>
