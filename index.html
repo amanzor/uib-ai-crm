@@ -1267,42 +1267,50 @@
                         </div>
 
                     <form id="agentForm">
-                        <div class="form-grid">
-                            <div class="form-group" style="position:relative;">
-                                <label>Customer Name *</label>
-                                <input type="text" id="customerName" required autocomplete="off"
-                                    oninput="customerNameAutocomplete(this.value)"
-                                    onblur="setTimeout(()=>customerNameDropdownHide(),200)"
-                                    onkeydown="customerNameDropdownKeyNav(event)">
-                                <div id="customerNameDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1.5px solid #bae6fd;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);max-height:280px;overflow-y:auto;margin-top:3px;"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>Contact Name</label>
-                                <input type="text" id="contactName" placeholder="Optional">
-                            </div>
-                            <div class="form-group">
-                                <label>Source *</label>
-                                <div style="display:flex;gap:6px;align-items:center;">
-                                    <select id="source" required onchange="sourceDropdownChanged(this)" style="flex:1;"></select>
-                                    <button type="button" onclick="openAddSourceModal()" title="Add new source"
-                                        style="flex-shrink:0;padding:7px 10px;background:linear-gradient(to right,#0f2a78,#2563eb);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;" >＋</button>
+                        <!-- ── Customer Information Section ── -->
+                        <div style="margin:0;">
+                            <div style="background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid #5eead4;border-radius:10px;padding:14px 18px;">
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #99f6e4;">
+                                    <span style="font-size:15px;font-weight:700;color:#115e59;">👤 Customer Information</span>
+                                    <span style="font-size:12px;color:#0d9488;font-style:italic;">— who the policy is for and how they got here</span>
                                 </div>
-                                <!-- inline new-source input (hidden by default) -->
-                                <div id="newSourceRow" style="display:none;margin-top:6px;display:none;">
-                                    <input type="text" id="newSourceInput" placeholder="Type new source name…"
-                                        style="width:100%;padding:7px 10px;border:1px solid #7dd3fc;border-radius:6px;font-size:13px;"
-                                        onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewSource();}">
-                                    <div style="display:flex;gap:6px;margin-top:5px;">
-                                        <button type="button" onclick="saveNewSource()" class="btn-primary btn-sm" style="flex:1;">✓ Save Source</button>
-                                        <button type="button" onclick="cancelNewSource()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+                                    <div class="form-group" style="margin:0;position:relative;">
+                                        <label>Customer Name *</label>
+                                        <input type="text" id="customerName" required autocomplete="off"
+                                            oninput="customerNameAutocomplete(this.value)"
+                                            onblur="setTimeout(()=>customerNameDropdownHide(),200)"
+                                            onkeydown="customerNameDropdownKeyNav(event)">
+                                        <div id="customerNameDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1.5px solid #bae6fd;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);max-height:280px;overflow-y:auto;margin-top:3px;"></div>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Contact Name</label>
+                                        <input type="text" id="contactName" placeholder="Optional">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Source *</label>
+                                        <div style="display:flex;gap:6px;align-items:center;">
+                                            <select id="source" required onchange="sourceDropdownChanged(this)" style="flex:1;"></select>
+                                            <button type="button" onclick="openAddSourceModal()" title="Add new source"
+                                                style="flex-shrink:0;padding:7px 10px;background:linear-gradient(to right,#0d9488,#0f766e);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;" >＋</button>
+                                        </div>
+                                        <!-- inline new-source input (hidden by default) -->
+                                        <div id="newSourceRow" style="display:none;margin-top:6px;display:none;">
+                                            <input type="text" id="newSourceInput" placeholder="Type new source name…"
+                                                style="width:100%;padding:7px 10px;border:1px solid #5eead4;border-radius:6px;font-size:13px;"
+                                                onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewSource();}">
+                                            <div style="display:flex;gap:6px;margin-top:5px;">
+                                                <button type="button" onclick="saveNewSource()" class="btn-primary btn-sm" style="flex:1;">✓ Save Source</button>
+                                                <button type="button" onclick="cancelNewSource()" class="btn-secondary btn-sm" style="flex:1;">✕ Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Referred By *</label>
+                                        <input type="text" id="referredBy" placeholder="Name of referrer" required>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>Referred By *</label>
-                                <input type="text" id="referredBy" placeholder="Name of referrer" required>
-                            </div>
-
                         </div>
 
                         <!-- ── Policy Section ── -->
@@ -3131,7 +3139,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260615o"></script>
-    <script src="app.js?v=20260615o"></script>
+    <script src="motion.js?v=20260615p"></script>
+    <script src="app.js?v=20260615p"></script>
 </body>
 </html>
