@@ -7264,22 +7264,22 @@ function addDriverRow(prefill) {
     const div = document.createElement('div');
     div.className = 'driver-row';
     div.dataset.rid = rid;
-    div.style.cssText = 'background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;';
+    div.style.cssText = 'background:#fff;border:1px solid #99f6e4;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;';
     div.innerHTML = `
         <div>
-            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">First Name</label>
+            <label style="font-size:11px;font-weight:700;color:#115e59;display:block;margin-bottom:3px;text-transform:uppercase;">First Name</label>
             <input type="text" class="drv-firstName" placeholder="John" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
         <div>
-            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">Last Name</label>
+            <label style="font-size:11px;font-weight:700;color:#115e59;display:block;margin-bottom:3px;text-transform:uppercase;">Last Name</label>
             <input type="text" class="drv-lastName" placeholder="Doe" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
         <div>
-            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">Date of Birth</label>
+            <label style="font-size:11px;font-weight:700;color:#115e59;display:block;margin-bottom:3px;text-transform:uppercase;">Date of Birth</label>
             <input type="date" class="drv-dob" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
         <div>
-            <label style="font-size:11px;font-weight:700;color:#1e40af;display:block;margin-bottom:3px;text-transform:uppercase;">DL #</label>
+            <label style="font-size:11px;font-weight:700;color:#115e59;display:block;margin-bottom:3px;text-transform:uppercase;">DL #</label>
             <input type="text" class="drv-dl" placeholder="License #" style="width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
         <button type="button" onclick="this.closest('.driver-row').remove(); updateDriversEmptyState();" title="Remove driver"

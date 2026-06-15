@@ -1269,10 +1269,10 @@
                     <form id="agentForm">
                         <!-- ── Customer Information Section ── -->
                         <div style="margin:0;">
-                            <div style="background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid #5eead4;border-radius:10px;padding:14px 18px;">
-                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #99f6e4;">
-                                    <span style="font-size:15px;font-weight:700;color:#115e59;">👤 Customer Information</span>
-                                    <span style="font-size:12px;color:#0d9488;font-style:italic;">— who the policy is for and how they got here</span>
+                            <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:10px;padding:14px 18px;">
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #bfdbfe;">
+                                    <span style="font-size:15px;font-weight:700;color:#1e40af;">👤 Customer Information</span>
+                                    <span style="font-size:12px;color:#1d4ed8;font-style:italic;">— who the policy is for and how they got here</span>
                                 </div>
                                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
                                     <div class="form-group" style="margin:0;position:relative;">
@@ -1292,12 +1292,12 @@
                                         <div style="display:flex;gap:6px;align-items:center;">
                                             <select id="source" required onchange="sourceDropdownChanged(this)" style="flex:1;"></select>
                                             <button type="button" onclick="openAddSourceModal()" title="Add new source"
-                                                style="flex-shrink:0;padding:7px 10px;background:linear-gradient(to right,#0d9488,#0f766e);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;" >＋</button>
+                                                style="flex-shrink:0;padding:7px 10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;line-height:1;" >＋</button>
                                         </div>
                                         <!-- inline new-source input (hidden by default) -->
                                         <div id="newSourceRow" style="display:none;margin-top:6px;display:none;">
                                             <input type="text" id="newSourceInput" placeholder="Type new source name…"
-                                                style="width:100%;padding:7px 10px;border:1px solid #5eead4;border-radius:6px;font-size:13px;"
+                                                style="width:100%;padding:7px 10px;border:1px solid #93c5fd;border-radius:6px;font-size:13px;"
                                                 onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewSource();}">
                                             <div style="display:flex;gap:6px;margin-top:5px;">
                                                 <button type="button" onclick="saveNewSource()" class="btn-primary btn-sm" style="flex:1;">✓ Save Source</button>
@@ -1531,17 +1531,17 @@
 
                         <!-- ── Drivers Section (optional) ── -->
                         <div style="margin:14px 0 0 0;">
-                            <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:10px;padding:14px 18px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1.5px solid #bfdbfe;gap:10px;flex-wrap:wrap;">
+                            <div style="background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid #5eead4;border-radius:10px;padding:14px 18px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1.5px solid #99f6e4;gap:10px;flex-wrap:wrap;">
                                     <div style="display:flex;align-items:center;gap:10px;">
-                                        <span style="font-size:15px;font-weight:700;color:#1e40af;">🚘 Driver(s) Information</span>
-                                        <span style="font-size:11px;background:#dbeafe;color:#1e3a8a;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;">Optional</span>
-                                        <span style="font-size:12px;color:#1d4ed8;font-style:italic;">— skip if not applicable</span>
+                                        <span style="font-size:15px;font-weight:700;color:#115e59;">🚘 Driver(s) Information</span>
+                                        <span style="font-size:11px;background:#ccfbf1;color:#134e4a;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;">Optional</span>
+                                        <span style="font-size:12px;color:#0d9488;font-style:italic;">— skip if not applicable</span>
                                     </div>
-                                    <button type="button" onclick="addDriverRow()" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">+ Add Driver</button>
+                                    <button type="button" onclick="addDriverRow()" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">+ Add Driver</button>
                                 </div>
                                 <div id="driversContainer"></div>
-                                <div id="driversEmptyState" style="text-align:center;padding:14px 8px;font-size:13px;color:#475569;font-style:italic;">No drivers added. Click <strong style="color:#1d4ed8;">+ Add Driver</strong> if you need to capture driver details.</div>
+                                <div id="driversEmptyState" style="text-align:center;padding:14px 8px;font-size:13px;color:#475569;font-style:italic;">No drivers added. Click <strong style="color:#0d9488;">+ Add Driver</strong> if you need to capture driver details.</div>
                             </div>
                         </div>
 
@@ -3149,7 +3149,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
-    <script src="motion.js?v=20260615q"></script>
-    <script src="app.js?v=20260615q"></script>
+    <script src="motion.js?v=20260615r"></script>
+    <script src="app.js?v=20260615r"></script>
 </body>
 </html>
