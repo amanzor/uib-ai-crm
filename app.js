@@ -6473,13 +6473,93 @@ async function claudeCallAPI(systemPrompt, messages) {
         body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-    if (!data.content || !data.content.length) throw new Error('Empty response from Claude');
+    // Read as text first so we can see what GAS actually returned
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (e) { throw new Error(`Apps Script returned non-JSON: ${raw.slice(0, 200)}`); }
+
+    // GAS error envelope (action not handled, key missing, etc.)
+    if (data.success === false) {
+        throw new Error(`Apps Script error: ${data.error || JSON.stringify(data)}. → Your Apps Script doesn't recognize action="claude". Did you redeploy as "New version"?`);
+    }
+    // Claude API error envelope
+    if (data.error) {
+        const t = data.error.type || '';
+        const m = data.error.message || JSON.stringify(data.error);
+        if (t === 'authentication_error') {
+            throw new Error(`Claude API: invalid API key. Paste your real sk-ant-... key into handleClaudeRequest in the Apps Script.`);
+        }
+        throw new Error(`Claude API ${t}: ${m}`);
+    }
+    if (!data.content || !data.content.length) {
+        throw new Error(`Empty response from Claude. Raw: ${raw.slice(0, 300)}`);
+    }
 
     const textBlock = data.content.find(b => b.type === 'text');
     return { text: textBlock ? textBlock.text : '', raw: data };
 }
+
+// Diagnostic test — run `claudeTest()` in the browser console to verify
+// the full chain: browser → Apps Script → Claude API → browser.
+window.claudeTest = async function() {
+    console.group('🔍 Claude AI Connection Test');
+    console.log('Apps Script URL:', DRIVE_API_URL);
+    console.log('Model:', CLAUDE_MODEL);
+    console.log('Sending minimal test message…');
+
+    const payload = {
+        action: 'claude',
+        body: {
+            model: CLAUDE_MODEL,
+            max_tokens: 50,
+            messages: [{ role: 'user', content: 'Reply with just the word PONG and nothing else.' }]
+        }
+    };
+
+    try {
+        const res = await fetch(DRIVE_API_URL, { method: 'POST', body: JSON.stringify(payload) });
+        console.log('HTTP status:', res.status);
+        const raw = await res.text();
+        console.log('Raw response (first 500 chars):', raw.slice(0, 500));
+
+        let data;
+        try { data = JSON.parse(raw); }
+        catch (e) {
+            console.error('❌ Apps Script did not return JSON.');
+            console.error('Likely cause: Your Apps Script is not deployed, or returned an HTML error page.');
+            console.groupEnd();
+            return;
+        }
+
+        if (data.success === false) {
+            console.error('❌ Apps Script rejected the request:', data.error);
+            console.error('Likely cause: Your doPost is not recognizing action="claude".');
+            console.error('Fix: Re-check that you added `if (body.action === "claude") return handleClaudeRequest(body);` at the top of doPost, then redeploy as NEW version.');
+            console.groupEnd();
+            return;
+        }
+        if (data.error) {
+            console.error('❌ Claude API error:', data.error);
+            if (data.error.type === 'authentication_error') {
+                console.error('Fix: Replace sk-ant-PASTE-YOUR-KEY-HERE in handleClaudeRequest with your real Claude API key.');
+            }
+            console.groupEnd();
+            return;
+        }
+        if (data.content && data.content[0] && data.content[0].text) {
+            console.log('✅ SUCCESS! Claude replied:', data.content[0].text);
+            console.log('Tokens used:', data.usage);
+            console.groupEnd();
+            return;
+        }
+        console.warn('Unexpected response shape:', data);
+    } catch (err) {
+        console.error('❌ Network/fetch error:', err);
+        console.error('Likely cause: Apps Script URL is wrong or your network is blocking it.');
+    }
+    console.groupEnd();
+};
 
 function claudeTryParseEntry(text) {
     const match = text.match(/```json\s*([\s\S]*?)```/);
