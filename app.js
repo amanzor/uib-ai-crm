@@ -6433,31 +6433,68 @@ GUIDELINES:
     if (pdfMode) {
         return base + `
 
-PDF EXTRACTION MODE:
+PDF EXTRACTION MODE — be exhaustive:
 The user has uploaded a PDF (likely an insurance binder, declaration page, or policy document).
-Extract the following fields and respond with a JSON object wrapped in \`\`\`json fences. The JSON should be the LAST thing in your response.
+Extract EVERY field you can find — customer info, policy details, financials, drivers, AND vehicles.
+Do not skip fields just because they appear later in the document.
 
-Required JSON shape (omit fields you can't find):
+Respond with a JSON object wrapped in \`\`\`json fences. The JSON must be the LAST thing in your response.
+
+Full JSON shape (omit any field you can't find — don't make values up):
 \`\`\`json
 {
-  "customerName": "string",
-  "contactName": "string",
+  "customerName": "string (primary insured / business name)",
+  "contactName": "string (if separate contact listed)",
+  "source": "string (e.g. Referral, Walk-In, Online, Phone, Repeat Client)",
+  "referredBy": "string (name of referrer if mentioned)",
+
   "policyType": "New|Rewrite|Renewal|Renew A-B",
-  "lineOfBusiness": "string (e.g. Personal Auto, Home Owners H3, Commercial Auto)",
+  "lineOfBusiness": "exact match preferred: BOP, Boat, Builders Risk, Business Owner, Classic Collectors, Commercial Auto, Commercial Property, Excess Liability, Flood, Garage Keepers, General Liability, Home Owners DP1/DP2/DP3/H3/H4/H6/H8, Inland Marine, Motorcycle/ATV, Non-Trucking Liability, Personal Auto, Pollution Liability, Professional Liability, Surety Bond, Trucking, Umbrella, Workers Comp",
   "company": "string (insurance carrier name)",
-  "mga": "string",
+  "mga": "string (MGA / Premium Finance company)",
+  "policyNumber": "string",
+  "binderNumber": "string",
+
   "down": number,
   "agencyFee": number,
   "basePremium": number,
   "totalPremium": number,
-  "paymentMethod": "string",
-  "policyNumber": "string",
-  "effDate": "YYYY-MM-DD",
-  "term": "6|12"
+  "agencyCommission": number,
+  "paymentMethod": "CC-Agency|CC-Client|CC-Company|Cash|Check|ACH to Agency|Direct Billing|EFT|Escrow|Money Order|Premium Finance",
+  "paymentMethod2": "same options as above (if a second method appears)",
+  "paymentType": "Monthly Paid|Gross Paid",
+
+  "effDate": "YYYY-MM-DD (effective date)",
+  "expirationDate": "YYYY-MM-DD",
+  "term": "6|12",
+
+  "drivers": [
+    {
+      "firstName": "string",
+      "lastName": "string",
+      "dob": "YYYY-MM-DD",
+      "dl": "string (driver license number)"
+    }
+  ],
+  "vehicles": [
+    {
+      "year": "string or number",
+      "make": "string (e.g. Toyota, Ford, Honda)",
+      "model": "string (e.g. Camry, F-150)",
+      "vin": "string (17 chars, uppercase)"
+    }
+  ]
 }
 \`\`\`
 
-Before the JSON, give a brief 1-2 sentence summary of what you found. The current agent (${currentUser || amsCurrentUser}) will be auto-assigned to the entry.`;
+EXTRACTION TIPS:
+- Auto policies usually list multiple drivers in a "Drivers / Named Insureds" or "Operators" section. Extract every one.
+- Auto policies list vehicles in a "Vehicles", "Schedule of Autos", "Covered Autos", or "Insured Vehicles" section. Extract every one — including year, make, model, and the 17-character VIN.
+- Home / commercial property policies usually have no drivers or vehicles — leave those arrays empty rather than inventing entries.
+- If the PDF shows a date as MM/DD/YYYY, convert to YYYY-MM-DD.
+- For VINs, strip spaces and uppercase the result.
+
+Before the JSON, give a brief 2-3 sentence summary of what you found (carrier, # of drivers, # of vehicles, premium). The current agent (${currentUser || amsCurrentUser}) will be auto-assigned to the entry.`;
     }
     return base;
 }
@@ -6586,6 +6623,44 @@ function claudeTryParseEntry(text) {
     return null;
 }
 
+// Ensure a carrier exists in carrierMasterData; create with default rules if missing
+function claudeEnsureCarrier(name) {
+    if (!name) return false;
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    // Case-insensitive lookup first to avoid duplicates like "AIG" vs "Aig"
+    const existing = Object.keys(carrierMasterData || {})
+        .find(k => k.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing; // already there — return canonical key
+
+    if (!carrierMasterData) carrierMasterData = {};
+    carrierMasterData[trimmed] = {
+        carrierName:   trimmed,
+        phoneNumbers:  ["", "", ""],
+        emails:        { underwriting: "", general: "", miscellaneous: "" },
+        commissionRules: JSON.parse(JSON.stringify(DEFAULT_COMMISSION_RULES))
+    };
+    localStorage.setItem('carrierMasterData', JSON.stringify(carrierMasterData));
+    if (typeof driveSet === 'function') driveSet('carrierMasterData', carrierMasterData);
+    if (typeof refreshAllCarrierDropdowns === 'function') refreshAllCarrierDropdowns();
+    return trimmed;
+}
+
+// Ensure a source value exists in custom sources so the dropdown can show it
+function claudeEnsureSource(name) {
+    if (!name) return null;
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const all = [...DEFAULT_SOURCES, ...getCustomSources()];
+    const existing = all.find(s => s.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const customs = getCustomSources();
+    customs.push(trimmed);
+    saveCustomSources(customs);
+    if (typeof populateSourceDropdown === 'function') populateSourceDropdown('source', trimmed);
+    return trimmed;
+}
+
 function claudePrefillEntry(extracted) {
     claudeClosePanel();
     openDailySalesModal();
@@ -6594,22 +6669,153 @@ function claudePrefillEntry(extracted) {
             const el = document.getElementById(id);
             if (el && val !== undefined && val !== null && val !== '') el.value = val;
         };
-        setVal('customerName', extracted.customerName);
-        setVal('contactName', extracted.contactName);
-        setVal('policyType', extracted.policyType);
-        setVal('lineOfBusiness', extracted.lineOfBusiness);
-        setVal('company', extracted.company);
-        setVal('mga', extracted.mga);
-        setVal('down', extracted.down);
-        setVal('agencyFee', extracted.agencyFee);
-        setVal('basePremium', extracted.basePremium);
-        setVal('totalPremium', extracted.totalPremium);
-        setVal('paymentMethod', extracted.paymentMethod);
-        setVal('policyNumber', extracted.policyNumber);
-        setVal('effDate', extracted.effDate);
-        setVal('term', extracted.term);
+        const autoAdded = []; // track what we created so we can tell the user
+
+        // Auto-add carrier to master list if missing, then prep the dropdown
+        if (extracted.company) {
+            const before = Object.keys(carrierMasterData || {}).find(k => k.toLowerCase() === extracted.company.toLowerCase());
+            const canonical = claudeEnsureCarrier(extracted.company);
+            if (canonical && !before) autoAdded.push(`new carrier "${canonical}"`);
+            extracted.company = canonical || extracted.company;
+        }
+
+        // Auto-add source to custom sources if missing
+        if (extracted.source) {
+            const beforeS = [...DEFAULT_SOURCES, ...getCustomSources()].find(s => s.toLowerCase() === extracted.source.toLowerCase());
+            const canonicalSource = claudeEnsureSource(extracted.source);
+            if (canonicalSource && !beforeS) autoAdded.push(`new source "${canonicalSource}"`);
+            extracted.source = canonicalSource || extracted.source;
+        }
+
+        // Customer + source
+        setVal('customerName',  extracted.customerName);
+        setVal('contactName',   extracted.contactName);
+        setVal('source',        extracted.source);
+        setVal('referredBy',    extracted.referredBy);
+
+        // Policy
+        setVal('policyType',    extracted.policyType);
+        setVal('lineOfBusiness',extracted.lineOfBusiness);
+        setVal('company',       extracted.company);
+        setVal('mga',           extracted.mga);
+        setVal('policyNumber',  extracted.policyNumber);
+        // Note: binderNumber is auto-generated, don't override
+        setVal('effDate',       extracted.effDate);
+        setVal('term',          extracted.term);
+
+        // Financial
+        setVal('down',             extracted.down);
+        setVal('agencyFee',        extracted.agencyFee);
+        setVal('basePremium',      extracted.basePremium);
+        setVal('totalPremium',     extracted.totalPremium);
+        setVal('paymentMethod',    extracted.paymentMethod);
+        setVal('paymentMethod2',   extracted.paymentMethod2);
+        setVal('paymentType',      extracted.paymentType);
+
+        // Drivers — clear and repopulate from extraction
+        if (Array.isArray(extracted.drivers) && extracted.drivers.length > 0) {
+            const dc = document.getElementById('driversContainer');
+            if (dc) dc.innerHTML = '';
+            _driverRowCounter = 0;
+            extracted.drivers.forEach(d => addDriverRow(d));
+            if (typeof updateDriversEmptyState === 'function') updateDriversEmptyState();
+        }
+
+        // Vehicles — clear and repopulate from extraction
+        if (Array.isArray(extracted.vehicles) && extracted.vehicles.length > 0) {
+            const vc = document.getElementById('vehiclesContainer');
+            if (vc) vc.innerHTML = '';
+            _vehicleRowCounter = 0;
+            extracted.vehicles.forEach(v => addVehicleRow(v));
+            if (typeof updateVehiclesEmptyState === 'function') updateVehiclesEmptyState();
+        }
+
         if (typeof autoCalculateCommission === 'function') autoCalculateCommission();
+
+        // Validate required fields — auto-save if all present
+        setTimeout(() => claudeMaybeAutoSubmit(extracted, autoAdded), 300);
     }, 250);
+}
+
+function claudeMaybeAutoSubmit(extracted, autoAdded) {
+    // The fields the form requires to save (matches the HTML `required` attrs)
+    const requiredFields = [
+        { id: 'customerName',   label: 'Customer Name' },
+        { id: 'source',         label: 'Source' },
+        { id: 'referredBy',     label: 'Referred By' },
+        { id: 'policyType',     label: 'Policy Type' },
+        { id: 'lineOfBusiness', label: 'Line of Business' },
+        { id: 'company',        label: 'Insurance Company' },
+        { id: 'basePremium',    label: 'Base Premium' },
+        { id: 'totalPremium',   label: 'Total Premium' },
+        { id: 'paymentMethod',  label: 'Payment Method' },
+        { id: 'effDate',        label: 'Effective Date' },
+        { id: 'term',           label: 'Term' },
+        { id: 'paymentType',    label: 'Commission Type' }
+    ];
+    // Location is also required by the entry's design
+    const locSel = document.getElementById('salesLocationSelect');
+    const hasLocation = locSel && locSel.value;
+
+    const missing = requiredFields.filter(f => {
+        const el = document.getElementById(f.id);
+        return !el || !el.value || el.value.toString().trim() === '';
+    });
+
+    if (!hasLocation) {
+        missing.unshift({ id: 'salesLocationSelect', label: 'Office Location' });
+    }
+
+    const counts = {
+        drivers:  document.querySelectorAll('#driversContainer .driver-row').length,
+        vehicles: document.querySelectorAll('#vehiclesContainer .vehicle-row').length
+    };
+
+    if (missing.length === 0) {
+        // Auto-submit!
+        claudeShowToast(`✓ Prefilled from PDF · ${counts.drivers} driver${counts.drivers !== 1 ? 's' : ''} · ${counts.vehicles} vehicle${counts.vehicles !== 1 ? 's' : ''}${autoAdded.length ? ' · auto-added ' + autoAdded.join(', ') : ''}\nSaving entry…`, 'success');
+        setTimeout(() => {
+            try {
+                if (typeof saveEntry === 'function') {
+                    saveEntry();
+                    claudeShowToast('✅ Entry saved automatically!', 'success');
+                }
+            } catch (e) {
+                console.error('Auto-save failed:', e);
+                claudeShowToast(`⚠️ Auto-save failed: ${e.message}. Please review and click Save Policy Entry manually.`, 'warn');
+            }
+        }, 800);
+    } else {
+        const missingLabels = missing.map(f => f.label).join(', ');
+        // Highlight the first missing field
+        const firstMissing = document.getElementById(missing[0].id);
+        if (firstMissing) {
+            firstMissing.style.transition = 'box-shadow .3s, border-color .3s';
+            firstMissing.style.boxShadow = '0 0 0 3px rgba(220,38,38,.25)';
+            firstMissing.style.borderColor = '#dc2626';
+            firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => firstMissing.focus(), 600);
+            setTimeout(() => {
+                firstMissing.style.boxShadow = '';
+                firstMissing.style.borderColor = '';
+            }, 4000);
+        }
+        claudeShowToast(`✓ Prefilled what I could from PDF${autoAdded.length ? ' (auto-added ' + autoAdded.join(', ') + ')' : ''}.\nPlease fill in: ${missingLabels}\nThen click Save Policy Entry.`, 'info');
+    }
+}
+
+function claudeShowToast(text, kind) {
+    const colors = {
+        success: 'linear-gradient(135deg,#16a34a,#15803d)',
+        warn:    'linear-gradient(135deg,#f59e0b,#d97706)',
+        info:    'linear-gradient(135deg,#2563eb,#1d4ed8)'
+    };
+    const msg = document.createElement('div');
+    msg.style.cssText = `position:fixed;top:80px;right:24px;z-index:10020;background:${colors[kind] || colors.info};color:#fff;padding:14px 20px;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.3);font-weight:600;font-size:13px;max-width:380px;white-space:pre-line;line-height:1.5;`;
+    msg.textContent = text;
+    document.body.appendChild(msg);
+    setTimeout(() => { msg.style.opacity = '0'; msg.style.transition = 'opacity .4s'; }, 5500);
+    setTimeout(() => msg.remove(), 6000);
 }
 
 function claudeRenderMarkdown(text) {
