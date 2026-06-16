@@ -4325,18 +4325,78 @@ function loadAgentCommissionData() {
     const grossPaidCarriers = agentData.grossPaidCarriers || {};
     const agentShares = getAgentCommissionShares(agent);
 
+    // Collect all available years from data and populate year dropdown
+    const allYearsSet = new Set();
+    const collectYears = (carriers) => {
+        Object.values(carriers).forEach(months => {
+            Object.keys(months).forEach(m => {
+                const parts = m.split(' ');
+                if (parts.length === 2) allYearsSet.add(parts[1]);
+            });
+        });
+    };
+    collectYears(monthlyPaidCarriers);
+    collectYears(grossPaidCarriers);
+    Object.keys(agentShares).forEach(m => { const p = m.split(' '); if (p.length === 2) allYearsSet.add(p[1]); });
+
+    const yearSel = document.getElementById('commFilterYear');
+    if (yearSel) {
+        const currentYearVal = yearSel.value;
+        const sortedYears = [...allYearsSet].sort((a, b) => b - a);
+        yearSel.innerHTML = '<option value="">All Years</option>' +
+            sortedYears.map(y => `<option value="${y}" ${y === currentYearVal ? 'selected' : ''}>${y}</option>`).join('');
+    }
+
+    // Read active filters
+    const filterMonth = document.getElementById('commFilterMonth')?.value || '';
+    const filterYear  = document.getElementById('commFilterYear')?.value  || '';
+
+    const monthMatches = (monthKey) => {
+        if (!filterMonth && !filterYear) return true;
+        const [mName, mYear] = monthKey.split(' ');
+        if (filterMonth && mName !== filterMonth) return false;
+        if (filterYear  && mYear  !== filterYear)  return false;
+        return true;
+    };
+
+    // Filter carrier data
+    const filterCarriers = (carriers) => {
+        const result = {};
+        Object.entries(carriers).forEach(([carrier, months]) => {
+            const filteredMonths = Object.fromEntries(
+                Object.entries(months).filter(([month]) => monthMatches(month))
+            );
+            if (Object.keys(filteredMonths).length > 0) result[carrier] = filteredMonths;
+        });
+        return result;
+    };
+
+    const filteredMonthly = filterCarriers(monthlyPaidCarriers);
+    const filteredGross   = filterCarriers(grossPaidCarriers);
+    const filteredShares  = Object.fromEntries(
+        Object.entries(agentShares).filter(([month]) => monthMatches(month))
+    );
+
+    // Totals from filtered data
     let totalCommissions = 0;
     let allMonths = new Set();
 
-    Object.values(monthlyPaidCarriers).forEach(carrier => {
-        Object.values(carrier).forEach(entry => { totalCommissions += typeof entry === 'object' ? entry.amount : entry; });
-        Object.keys(carrier).forEach(month => allMonths.add(month));
+    Object.values(filteredMonthly).forEach(carrier => {
+        Object.entries(carrier).forEach(([month, entry]) => {
+            totalCommissions += typeof entry === 'object' ? entry.amount : entry;
+            allMonths.add(month);
+        });
     });
-    Object.values(grossPaidCarriers).forEach(carrier => {
-        Object.values(carrier).forEach(entry => { totalCommissions += typeof entry === 'object' ? entry.amount : entry; });
-        Object.keys(carrier).forEach(month => allMonths.add(month));
+    Object.values(filteredGross).forEach(carrier => {
+        Object.entries(carrier).forEach(([month, entry]) => {
+            totalCommissions += typeof entry === 'object' ? entry.amount : entry;
+            allMonths.add(month);
+        });
     });
-    Object.values(agentShares).forEach(m => { totalCommissions += m.total; Object.keys(agentShares).forEach(mo => allMonths.add(mo)); });
+    Object.entries(filteredShares).forEach(([month, m]) => {
+        totalCommissions += m.total;
+        allMonths.add(month);
+    });
 
     const monthCount = allMonths.size;
     document.getElementById('agentTotalCommissions').textContent = `$${totalCommissions.toFixed(2)}`;
@@ -4344,11 +4404,11 @@ function loadAgentCommissionData() {
     document.getElementById('agentCommissionCount').textContent = monthCount;
 
     const tbody = document.getElementById('agentCommissionTable');
-    const hasCarrierData = Object.keys(monthlyPaidCarriers).length > 0 || Object.keys(grossPaidCarriers).length > 0;
-    const hasShareData = Object.keys(agentShares).length > 0;
+    const hasCarrierData = Object.keys(filteredMonthly).length > 0 || Object.keys(filteredGross).length > 0;
+    const hasShareData = Object.keys(filteredShares).length > 0;
 
     if (!hasCarrierData && !hasShareData) {
-        tbody.innerHTML = '<tr><td colspan="4" class="no-data">No commission data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">No commission data for the selected period</td></tr>';
         return;
     }
 
@@ -4369,12 +4429,12 @@ function loadAgentCommissionData() {
         });
     };
 
-    renderCarrierRows(monthlyPaidCarriers, '📅 Monthly Paid Commission Carriers', '#e3f2fd');
-    renderCarrierRows(grossPaidCarriers, '💰 Gross Paid Carriers', '#f3e5f5');
+    renderCarrierRows(filteredMonthly, '📅 Monthly Paid Commission Carriers', '#e3f2fd');
+    renderCarrierRows(filteredGross,   '💰 Gross Paid Carriers', '#f3e5f5');
 
     if (hasShareData) {
         tableHTML += `<tr style="background-color: #e8f5e9; font-weight: bold;"><td colspan="4">🤝 Agent Commission (50% of Agency Fee + Agency Commission)</td></tr>`;
-        Object.entries(agentShares).forEach(([month, data]) => {
+        Object.entries(filteredShares).forEach(([month, data]) => {
             tableHTML += `<tr>
                 <td>Agent Commission</td>
                 <td>${data.count} polic${data.count === 1 ? 'y' : 'ies'}</td>
@@ -4385,6 +4445,14 @@ function loadAgentCommissionData() {
     }
 
     tbody.innerHTML = tableHTML;
+}
+
+function clearCommissionFilters() {
+    const m = document.getElementById('commFilterMonth');
+    const y = document.getElementById('commFilterYear');
+    if (m) m.value = '';
+    if (y) y.value = '';
+    loadAgentCommissionData();
 }
 
 function exportAgentCommissions() {
