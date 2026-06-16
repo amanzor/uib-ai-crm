@@ -6739,10 +6739,9 @@ function claudePrefillEntry(extracted) {
 
 function claudeMaybeAutoSubmit(extracted, autoAdded) {
     // The fields the form requires to save (matches the HTML `required` attrs)
+    // Note: Source and Referred By are now optional.
     const requiredFields = [
         { id: 'customerName',   label: 'Customer Name' },
-        { id: 'source',         label: 'Source' },
-        { id: 'referredBy',     label: 'Referred By' },
         { id: 'policyType',     label: 'Policy Type' },
         { id: 'lineOfBusiness', label: 'Line of Business' },
         { id: 'company',        label: 'Insurance Company' },
