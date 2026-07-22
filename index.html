@@ -564,6 +564,107 @@
         .nav-tab svg.lucide { width: 15px; height: 15px; }
         .timeline-icon svg.lucide { width: 17px; height: 17px; }
 
+        /* ── Auth / Roles ───────────────────────────────────────── */
+        body.role-agent .admin-only { display: none !important; }
+        #userBar {
+            position: absolute;
+            top: 14px; right: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+        }
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 14px;
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 999px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        #userBar .nav-tab { padding: 7px 13px; font-size: 12.5px; }
+
+        #loginScreen {
+            display: none;
+            position: fixed; inset: 0;
+            width: 100vw; height: 100vh;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0d1f3c 0%, #1e3a5f 50%, #1d4ed8 100%);
+            padding: 20px;
+            z-index: 9000;   /* below modals (9999) so Admin Access opens on top */
+            overflow-y: auto;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            padding: 44px 40px 36px;
+            width: 100%;
+            max-width: 420px;
+            margin: auto;
+        }
+        .login-card .form-group input { width: 100%; }
+        .login-error {
+            display: none;
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid #fca5a5;
+        }
+
+        /* ── Agent Cards ─────────────────────────────────────────── */
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .agent-card {
+            background: white;
+            border: 1.5px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            transition: all .2s ease;
+        }
+        .agent-card:hover {
+            border-color: var(--blue-light);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(29,78,216,.15);
+        }
+        .agent-card-top { display: flex; align-items: center; gap: 13px; margin-bottom: 14px; }
+        .agent-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue) 0%, var(--navy) 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .agent-card-name { font-weight: 700; color: var(--navy); font-size: 15px; }
+        .agent-card-email { font-size: 12px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .agent-card-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-100);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+        }
+        .agent-card-stats .num { display: block; font-weight: 800; color: var(--navy); font-size: 14.5px; letter-spacing: -0.3px; white-space: nowrap; }
+        .agent-card-stats .lbl { display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-400); margin-top: 2px; }
+
         /* ── Responsive ─────────────────────────────────────────── */
         @media (max-width: 900px) {
             .section.active { padding: 24px 20px; }
@@ -582,14 +683,17 @@
 <body>
     <div class="container">
         <header>
+            <div id="userBar"></div>
             <h1><img src="icon.png" alt="" class="header-icon"> UIB CRM</h1>
             <p>Universal Insurance Brokers — Customer Relationship Management</p>
             <div class="nav-tabs">
                 <button class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
                 <button class="nav-tab" data-tab="contacts" onclick="switchTab('contacts')"><i data-lucide="users"></i> Contacts</button>
                 <button class="nav-tab" data-tab="pipeline" onclick="switchTab('pipeline')"><i data-lucide="trending-up"></i> Pipeline</button>
+                <button class="nav-tab" data-tab="renewals" onclick="switchTab('renewals')"><i data-lucide="refresh-cw"></i> Renewals</button>
                 <button class="nav-tab" data-tab="tasks" onclick="switchTab('tasks')"><i data-lucide="check-square"></i> Tasks</button>
                 <button class="nav-tab" data-tab="activities" onclick="switchTab('activities')"><i data-lucide="history"></i> Activities</button>
+                <button class="nav-tab" data-tab="agents" onclick="switchTab('agents')"><i data-lucide="id-card"></i> Agents</button>
             </div>
         </header>
 
@@ -675,7 +779,7 @@
                             <option>Prospect</option>
                         </select>
                     </div>
-                    <div class="filter-group">
+                    <div class="filter-group admin-only">
                         <label>Agent</label>
                         <select id="contactAgentFilter" onchange="renderContacts()"></select>
                     </div>
@@ -720,7 +824,7 @@
                         <label>Search</label>
                         <input type="text" id="leadSearch" placeholder="Name, LOB, carrier…" oninput="renderLeads()">
                     </div>
-                    <div class="filter-group">
+                    <div class="filter-group admin-only">
                         <label>Agent</label>
                         <select id="leadAgentFilter" onchange="renderLeads()"></select>
                     </div>
@@ -762,7 +866,7 @@
                             <option value="">All</option>
                         </select>
                     </div>
-                    <div class="filter-group">
+                    <div class="filter-group admin-only">
                         <label>Agent</label>
                         <select id="taskAgentFilter" onchange="renderTasks()"></select>
                     </div>
@@ -812,6 +916,53 @@
                 </div>
 
                 <div class="timeline" id="activityList"></div>
+            </div>
+
+            <!-- ══ RENEWALS ════════════════════════════════════════ -->
+            <div id="section-renewals" class="section">
+                <div class="section-header">
+                    <h2><i data-lucide="refresh-cw"></i> Renewals</h2>
+                    <div class="actions">
+                        <span class="badge badge-blue" id="renewalCount" style="align-self:center;"></span>
+                    </div>
+                </div>
+
+                <div class="filter-section admin-only">
+                    <div class="filter-group">
+                        <label>Agent</label>
+                        <select id="renewalAgentFilter" onchange="renderRenewals()"></select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Line of Business</th>
+                                <th>Carrier</th>
+                                <th>Policy #</th>
+                                <th>Premium</th>
+                                <th>Expiration</th>
+                                <th>Time Left</th>
+                                <th>Agent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="renewalsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ══ AGENTS ══════════════════════════════════════════ -->
+            <div id="section-agents" class="section">
+                <div class="section-header">
+                    <h2><i data-lucide="id-card"></i> Agents</h2>
+                    <div class="actions admin-only">
+                        <button class="btn-primary" onclick="openCredentialManager()"><i data-lucide="key-round"></i> Manage Credentials</button>
+                    </div>
+                </div>
+                <div class="agents-grid" id="agentCards"></div>
             </div>
         </div>
     </div>
@@ -1062,6 +1213,143 @@
                 <div class="modal-actions">
                     <button class="btn-secondary" onclick="closeModal('activityModal')">Cancel</button>
                     <button class="btn-success" onclick="saveActivity()"><i data-lucide="save"></i> Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ LOGIN SCREEN (same design as the UIB Binder Book) ═══════ -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <div style="text-align:center;margin-bottom:32px;">
+                <img src="icon.png" alt="UIB Logo" style="width:88px;height:88px;object-fit:contain;margin-bottom:14px;filter:drop-shadow(0 6px 16px rgba(29,78,216,.25));">
+                <h2 style="margin:0 0 6px;font-size:1.6rem;font-weight:800;color:#0d1f3c;letter-spacing:-0.5px;">UIB CRM</h2>
+                <p style="margin:0;font-size:14px;color:#6b7280;">Sign in to your account</p>
+            </div>
+
+            <div id="agentLoginError" class="login-error"></div>
+
+            <form onsubmit="submitAgentEmailLogin(event)">
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">Email Address</label>
+                    <input type="email" id="agentLoginEmail" placeholder="Enter your email" required
+                        style="width:100%;padding:12px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;transition:border-color .2s;"
+                        onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#d1d5db'">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">Password</label>
+                    <div style="position:relative;">
+                        <input type="password" id="agentLoginPassword" placeholder="••••••••" required
+                            style="width:100%;padding:12px 40px 12px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;transition:border-color .2s;"
+                            onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#d1d5db'">
+                        <button type="button" onclick="togglePasswordVisibility('agentLoginPassword')"
+                            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;color:#9ca3af;display:flex;align-items:center;box-shadow:none;">
+                            <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px;">
+                    <input type="checkbox" id="rememberAgentEmail" style="width:16px;height:16px;accent-color:#1d4ed8;cursor:pointer;">
+                    <label for="rememberAgentEmail" style="font-size:13px;color:#6b7280;cursor:pointer;margin:0;user-select:none;">Remember my email</label>
+                </div>
+                <button type="submit" style="width:100%;padding:14px;font-size:15px;font-weight:700;background:linear-gradient(135deg,#1d4ed8,#1e40af);color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 14px rgba(29,78,216,.4);">
+                    <i data-lucide="log-in" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;"></i> Sign In
+                </button>
+            </form>
+
+            <div style="display:flex;align-items:center;gap:12px;margin:24px 0 20px;">
+                <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+                <span style="font-size:12px;color:#9ca3af;font-weight:500;">OR</span>
+                <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+            </div>
+
+            <button onclick="showAdminLogin()" style="width:100%;padding:11px;font-size:13px;font-weight:600;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:none;">
+                <i data-lucide="lock" style="width:14px;height:14px;"></i> Admin Access
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ ADMIN LOGIN MODAL ═══════════════════════════════════════ -->
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h3><i data-lucide="lock"></i> Admin Access</h3>
+                <button class="modal-close" onclick="closeModal('adminLoginModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="adminLoginError" class="login-error"></div>
+                <form onsubmit="submitAdminLogin(event)">
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label>Admin Password</label>
+                        <input type="password" id="adminPassword" placeholder="••••••••" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('adminLoginModal')">Cancel</button>
+                        <button type="submit" class="btn-primary"><i data-lucide="log-in"></i> Sign In</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MANAGE CREDENTIALS MODAL (admin) ════════════════════════ -->
+    <div id="credentialsModal" class="modal">
+        <div class="modal-content" style="max-width:640px;">
+            <div class="modal-header">
+                <h3><i data-lucide="key-round"></i> Manage Agent Credentials</h3>
+                <button class="modal-close" onclick="closeModal('credentialsModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:12.5px;color:var(--gray-400);margin-bottom:16px;">
+                    Same credentials as the UIB Binder Book. Changes save automatically as you type.
+                </p>
+                <div id="credentialList"></div>
+
+                <div class="box-policy" style="margin-top:18px;">
+                    <h4><i data-lucide="user-plus"></i> Add Agent</h4>
+                    <form onsubmit="submitAddAgent(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Agent Name *</label>
+                                <input type="text" id="newCredAgent" placeholder="First Last">
+                            </div>
+                            <div class="form-group">
+                                <label>Email (username)</label>
+                                <input type="email" id="newCredEmail" placeholder="agent@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Password *</label>
+                                <input type="text" id="newCredPassword" placeholder="Password">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary btn-sm"><i data-lucide="plus"></i> Add Agent</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ REASSIGN CLIENT MODAL ═══════════════════════════════════ -->
+    <div id="reassignModal" class="modal">
+        <div class="modal-content" style="max-width:460px;">
+            <div class="modal-header">
+                <h3><i data-lucide="arrow-left-right"></i> Reassign Client</h3>
+                <button class="modal-close" onclick="closeModal('reassignModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reassignContactId">
+                <p id="reassignWho" style="font-size:14px;color:var(--gray-700);margin-bottom:16px;line-height:1.6;"></p>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Reassign To</label>
+                    <select id="reassignAgent"></select>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <input type="checkbox" id="reassignMoveOpen" checked style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;">
+                    <label for="reassignMoveOpen" style="font-size:13px;color:var(--gray-700);cursor:pointer;user-select:none;">Also move their open leads and tasks</label>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-secondary" onclick="closeModal('reassignModal')">Cancel</button>
+                    <button class="btn-purple" onclick="submitReassign()"><i data-lucide="arrow-left-right"></i> Reassign</button>
                 </div>
             </div>
         </div>
