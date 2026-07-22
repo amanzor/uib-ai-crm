@@ -655,6 +655,7 @@ function renewalRows() {
 }
 
 function renderRenewals() {
+    if (isAdmin()) aiGreet();
     const agent = isAdmin() ? document.getElementById('renewalAgentFilter').value : '';
     const rows = renewalRows().filter(r => !agent || r.c.agent === agent);
 
@@ -960,6 +961,298 @@ document.addEventListener('change', e => {
         setVal('cOffice', e.target.value === 'Jorge Castro' ? 'Franchise' : 'Hialeah');
     }
 });
+
+// ══════════════════════════════════════════════════════════════════
+// CLAUDE AI CHAT — Renewal Report Processor (admin only)
+// Routed through the same Google Apps Script proxy as the Binder Book,
+// so the Claude API key configured there is reused as-is.
+// ══════════════════════════════════════════════════════════════════
+const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbypm1A3G5Wgf4onwSU-yk6FbmTOA-9in7HcFrg0YWL6UBdhNj4di7yVDNlflLYwaehI/exec";
+const CLAUDE_MODEL = 'claude-opus-4-8';
+let _aiMessages = [];        // chat history [{role, content}]
+let _aiPendingPdfs = [];     // [{name, base64}] queued for next send
+let _aiBusy = false;
+let _aiExtractCounter = 0;   // ids for pending imports
+const _aiPendingImports = {};
+
+function aiNewConversation() {
+    _aiMessages = [];
+    _aiPendingPdfs = [];
+    document.getElementById('aiChatMessages').innerHTML = '';
+    document.getElementById('aiChatFilePreview').style.display = 'none';
+    aiGreet();
+}
+
+function aiGreet() {
+    if (_aiMessages.length === 0 && !document.getElementById('aiChatMessages').children.length) {
+        aiAddMessage('assistant', aiRenderMarkdown(
+            `👋 Hi ${currentAgent() || 'there'}! I'm your UIB AI assistant. Attach one or more **renewal report PDFs** with 📎 and I'll import every policy into the CRM — or just ask me anything about your book of business.`), true);
+    }
+}
+
+function aiAddMessage(role, html, isHtml) {
+    const box = document.getElementById('aiChatMessages');
+    const div = document.createElement('div');
+    div.style.cssText = role === 'user'
+        ? 'align-self:flex-end;max-width:85%;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;padding:10px 14px;border-radius:12px 12px 3px 12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;'
+        : 'align-self:flex-start;max-width:92%;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;padding:10px 14px;border-radius:12px 12px 12px 3px;font-size:13.5px;line-height:1.55;word-break:break-word;';
+    if (isHtml) div.innerHTML = html; else div.textContent = html;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+}
+
+function aiRenderMarkdown(text) {
+    let html = String(text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/```json[\s\S]*?```/g, '')   // strip extraction JSON from display
+        .replace(/```([\s\S]*?)```/g, '<pre style="background:#f3f4f6;padding:8px;border-radius:6px;font-size:12px;overflow-x:auto;">$1</pre>')
+        .replace(/`([^`]+)`/g, '<code style="background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:12px;">$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|\n)- (.+)/g, '$1• $2')
+        .replace(/\n/g, '<br>');
+    return html.trim();
+}
+
+function aiHandlePdfUpload(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    files.forEach(file => {
+        if (file.type !== 'application/pdf') { toast(`${file.name} is not a PDF`); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            _aiPendingPdfs.push({ name: file.name, base64: e.target.result.split(',')[1] });
+            const preview = document.getElementById('aiChatFilePreview');
+            preview.style.display = 'block';
+            preview.textContent = `📎 ${_aiPendingPdfs.map(p => p.name).join(', ')} — will be sent with your next message`;
+        };
+        reader.readAsDataURL(file);
+    });
+    document.getElementById('aiChatInput').focus();
+}
+
+function aiBuildContext() {
+    const renewals = renewalRows();
+    const open = leads.filter(l => l.stage !== 'bound' && l.stage !== 'lost');
+    return [
+        `Contacts: ${contacts.length} (${contacts.filter(c => c.type === 'Customer').length} customers)`,
+        `Open leads: ${open.length} worth ${money(open.reduce((s, l) => s + Number(l.premium || 0), 0))}`,
+        `Renewals due within ${RENEWAL_WINDOW_DAYS} days: ${renewals.length}`,
+        `Agents: ${getAllAgents().join(', ')}`,
+        `Next renewals: ${renewals.slice(0, 10).map(r => `${r.c.name} (${r.c.carrier || '?'}, exp ${r.c.expiration}, ${money(r.c.premium)})`).join('; ') || 'none'}`
+    ].join('\n');
+}
+
+function aiBuildSystemPrompt(pdfMode) {
+    const base = `You are the AI assistant for UIB CRM — the customer relationship manager for Universal Insurance Brokers (sister app to the UIB Binder Book). You help the agency manage clients, leads, renewals, and agents.
+
+CONTEXT — CRM current state:
+${aiBuildContext()}
+
+GUIDELINES:
+- Be concise and practical. Insurance agents are busy.
+- When asked about data, reference the actual numbers from the context above.
+- If you don't have enough data to answer, say so.`;
+
+    if (!pdfMode) return base;
+    return base + `
+
+RENEWAL REPORT EXTRACTION MODE — be exhaustive:
+The user uploaded PDF(s) — most likely carrier renewal reports, expiration lists, or declaration pages.
+Extract EVERY policy/renewal row you can find across ALL attached documents. Do not stop early; do not skip rows.
+
+Respond with a JSON object wrapped in \`\`\`json fences. The JSON must be the LAST thing in your response.
+
+JSON shape (omit fields you can't find — never invent values):
+\`\`\`json
+{
+  "renewals": [
+    {
+      "customerName": "string (insured / business name)",
+      "phone": "string",
+      "email": "string",
+      "address": "string",
+      "policyNumber": "string",
+      "lineOfBusiness": "prefer exact match: ${LOBS.join(', ')}",
+      "carrier": "string (insurance carrier)",
+      "premium": number (renewal or expiring premium),
+      "effectiveDate": "YYYY-MM-DD",
+      "expirationDate": "YYYY-MM-DD (renewal/expiration date — REQUIRED, this drives the Renewals tab)",
+      "agent": "string (assigned agent/producer if listed)"
+    }
+  ]
+}
+\`\`\`
+
+EXTRACTION TIPS:
+- Renewal reports are usually tables: one row per policy. Extract every row.
+- Convert MM/DD/YYYY dates to YYYY-MM-DD.
+- If a report shows both expiring and renewal premium, use the renewal premium.
+- Known agents (match to these names when the report lists a producer): ${getAllAgents().join(', ')}.
+
+Before the JSON, give a brief summary: number of policies found, carriers, and the expiration date range.`;
+}
+
+async function aiCallAPI(systemPrompt, messages) {
+    const payload = {
+        action: 'claude',
+        body: { model: CLAUDE_MODEL, max_tokens: 8192, system: systemPrompt, messages }
+    };
+    const res = await fetch(DRIVE_API_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch { throw new Error(`Apps Script returned non-JSON: ${raw.slice(0, 200)}`); }
+    if (data.success === false) throw new Error(`Apps Script error: ${String(data.error || JSON.stringify(data))}`);
+    if (data.error) throw new Error(`Claude API ${data.error.type || ''}: ${data.error.message || JSON.stringify(data.error)}`);
+    if (!data.content || !data.content.length) throw new Error(`Empty response from Claude.`);
+    const textBlock = data.content.find(b => b.type === 'text');
+    return textBlock ? textBlock.text : '';
+}
+
+async function aiSendMessage() {
+    if (_aiBusy) return;
+    const input = document.getElementById('aiChatInput');
+    let userText = (input.value || '').trim();
+    const pdfs = _aiPendingPdfs;
+    if (!userText && !pdfs.length) return;
+    if (!userText && pdfs.length) userText = 'Extract every renewal from these report(s) and import them into the CRM.';
+
+    aiAddMessage('user', (pdfs.length ? pdfs.map(p => `📎 ${p.name}`).join('\n') + '\n' : '') + userText);
+    input.value = '';
+    _aiPendingPdfs = [];
+    document.getElementById('aiChatFilePreview').style.display = 'none';
+
+    const content = [
+        ...pdfs.map(p => ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: p.base64 } })),
+        { type: 'text', text: userText }
+    ];
+    _aiMessages.push({ role: 'user', content });
+
+    _aiBusy = true;
+    const sendBtn = document.getElementById('aiChatSendBtn');
+    sendBtn.disabled = true; sendBtn.textContent = '…';
+    const loading = aiAddMessage('assistant', '✨ Thinking…');
+
+    try {
+        const reply = await aiCallAPI(aiBuildSystemPrompt(pdfs.length > 0), _aiMessages);
+        loading.remove();
+        _aiMessages.push({ role: 'assistant', content: reply });
+
+        const extracted = pdfs.length ? aiTryParseRenewals(reply) : null;
+        if (extracted && extracted.length) {
+            const importId = 'imp' + (++_aiExtractCounter);
+            _aiPendingImports[importId] = extracted;
+            const msg = aiAddMessage('assistant', '', true);
+            msg.innerHTML = aiRenderMarkdown(reply) +
+                `<div style="margin-top:12px;padding:12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;">
+                    <div style="font-weight:700;color:#15803d;margin-bottom:8px;">✓ ${extracted.length} renewal${extracted.length > 1 ? 's' : ''} found</div>
+                    <button onclick="aiImportRenewals('${importId}', this)"
+                        style="background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;box-shadow:none;">
+                        📥 Import ${extracted.length} renewal${extracted.length > 1 ? 's' : ''} into the CRM
+                    </button>
+                </div>`;
+        } else {
+            aiAddMessage('assistant', aiRenderMarkdown(reply), true);
+        }
+    } catch (err) {
+        loading.remove();
+        aiAddMessage('assistant', `❌ Error: ${err.message}\n\nThe chat uses the same Google Apps Script proxy as the Binder Book — make sure its Claude setup is deployed.`);
+    } finally {
+        _aiBusy = false;
+        sendBtn.disabled = false; sendBtn.textContent = 'Send';
+    }
+}
+
+function aiTryParseRenewals(text) {
+    const match = text.match(/```json\s*([\s\S]*?)```/);
+    if (!match) return null;
+    try {
+        const obj = JSON.parse(match[1]);
+        const rows = Array.isArray(obj) ? obj : obj.renewals;
+        if (Array.isArray(rows)) return rows.filter(r => r && (r.customerName || r.policyNumber));
+    } catch { /* ignore */ }
+    return null;
+}
+
+function aiMatchAgent(name) {
+    if (!name) return '';
+    const n = String(name).trim().toLowerCase();
+    const agents = getAllAgents();
+    return agents.find(a => a.toLowerCase() === n)
+        || agents.find(a => a.toLowerCase().includes(n) || n.includes(a.split(' ')[0].toLowerCase()))
+        || '';
+}
+
+function aiNormDate(d) {
+    if (!d) return '';
+    const s = String(d).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (m) {
+        const yr = m[3].length === 2 ? '20' + m[3] : m[3];
+        return `${yr}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+    }
+    return '';
+}
+
+function aiImportRenewals(importId, btn) {
+    const rows = _aiPendingImports[importId];
+    if (!rows) return;
+    delete _aiPendingImports[importId];
+    if (btn) { btn.disabled = true; btn.textContent = 'Imported ✓'; btn.style.opacity = '.6'; }
+
+    let updated = 0, created = 0;
+    rows.forEach(r => {
+        const name = String(r.customerName || '').trim();
+        const policy = String(r.policyNumber || '').trim();
+        const expiration = aiNormDate(r.expirationDate);
+        const data = {
+            phone:      r.phone ? String(r.phone).trim() : undefined,
+            email:      r.email ? String(r.email).trim() : undefined,
+            address:    r.address ? String(r.address).trim() : undefined,
+            lob:        r.lineOfBusiness ? String(r.lineOfBusiness).trim() : undefined,
+            carrier:    r.carrier ? String(r.carrier).trim() : undefined,
+            policy:     policy || undefined,
+            premium:    r.premium != null && r.premium !== '' ? Number(r.premium) : undefined,
+            effective:  aiNormDate(r.effectiveDate) || undefined,
+            expiration: expiration || undefined
+        };
+        Object.keys(data).forEach(k => data[k] === undefined && delete data[k]);
+
+        // Match existing contact by policy number first, then by name
+        let c = policy ? contacts.find(x => (x.policy || '').trim().toLowerCase() === policy.toLowerCase()) : null;
+        if (!c && name) c = contacts.find(x => x.name.trim().toLowerCase() === name.toLowerCase());
+
+        if (c) {
+            Object.assign(c, data);
+            const agent = aiMatchAgent(r.agent);
+            if (agent && !c.agent) c.agent = agent;
+            updated++;
+        } else if (name) {
+            const agent = aiMatchAgent(r.agent);
+            contacts.push({
+                id: uid(), name, type: 'Customer',
+                phone: data.phone || '', email: data.email || '', address: data.address || '', dob: '',
+                lob: data.lob || '', carrier: data.carrier || '', policy: policy,
+                premium: data.premium || 0, effective: data.effective || '', expiration: expiration,
+                agent, office: agent === 'Jorge Castro' ? 'Franchise' : 'Hialeah',
+                notes: 'Imported from renewal report via AI chat'
+            });
+            created++;
+        }
+    });
+
+    activities.unshift({
+        id: uid(), type: 'note', contact: '', agent: currentAgent(),
+        text: `AI renewal report import: ${rows.length} policies processed — ${updated} client${updated === 1 ? '' : 's'} updated, ${created} created.`,
+        when: new Date().toISOString()
+    });
+    persist(); renderAll();
+    aiAddMessage('assistant', aiRenderMarkdown(
+        `📥 **Import complete** — ${updated} existing client${updated === 1 ? '' : 's'} updated and ${created} new client${created === 1 ? '' : 's'} created. They're now in the **Renewals** tab (and Contacts).`), true);
+    toast(`Renewals imported: ${updated} updated, ${created} created ✓`);
+}
 
 // ── Render everything ────────────────────────────────────────────────
 function renderAll() {
