@@ -375,7 +375,7 @@ function renderContacts() {
             <td>${esc(c.email) || '—'}</td>
             <td>${esc(c.lob) || '—'}</td>
             <td>${esc(c.carrier) || '—'}</td>
-            <td>${esc(c.agent) || '—'}</td>
+            <td>${agentSelectHtml(c)}</td>
             <td>
                 <div class="action-buttons">
                     <button class="btn-primary btn-sm" onclick="openContactModal('${c.id}')"><i data-lucide="pencil"></i> Edit</button>
@@ -675,7 +675,7 @@ function renderRenewals() {
             <td>${money(c.premium)}</td>
             <td>${fmtDate(c.expiration)}</td>
             <td><span class="badge ${badge}">${label}</span></td>
-            <td>${esc(c.agent) || '—'}</td>
+            <td>${agentSelectHtml(c)}</td>
             <td>
                 <div class="action-buttons">
                     <button class="btn-primary btn-sm" title="Edit client / update policy dates" onclick="openContactModal('${c.id}')"><i data-lucide="pencil"></i> Edit</button>
@@ -690,6 +690,30 @@ function renderRenewals() {
     }).join('')
         : `<tr><td colspan="9"><div class="no-data">No renewals due in the next ${RENEWAL_WINDOW_DAYS} days.</div></td></tr>`;
     refreshIcons();
+}
+
+// Inline agent assignment dropdown (used in Renewals + Contacts tables)
+function agentSelectHtml(c) {
+    const agents = getAllAgents();
+    return `<select class="inline-agent-select" onchange="inlineAssignAgent('${c.id}', this.value)" title="Assign agent">
+        <option value=""${!c.agent ? ' selected' : ''}>— Unassigned —</option>
+        ${agents.map(a => `<option value="${esc(a)}"${c.agent === a ? ' selected' : ''}>${esc(a)}</option>`).join('')}
+    </select>`;
+}
+
+function inlineAssignAgent(id, newAgent) {
+    const c = contacts.find(x => x.id === id);
+    if (!c || c.agent === newAgent) return;
+    const oldAgent = c.agent || 'Unassigned';
+    c.agent = newAgent;
+    if (newAgent) c.office = newAgent === 'Jorge Castro' ? 'Franchise' : (c.office || 'Hialeah');
+    activities.unshift({
+        id: uid(), type: 'note', contact: c.name, agent: newAgent || currentAgent(),
+        text: `Agent assigned: ${oldAgent} → ${newAgent || 'Unassigned'} (by ${currentAgent()}).`,
+        when: new Date().toISOString()
+    });
+    persist(); renderAll();
+    toast(`${c.name} → ${newAgent || 'Unassigned'} ✓`);
 }
 
 // Turn a client back into a prospect (policy not renewing)
