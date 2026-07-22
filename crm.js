@@ -379,6 +379,7 @@ function renderContacts() {
             <td>
                 <div class="action-buttons">
                     <button class="btn-primary btn-sm" onclick="openContactModal('${c.id}')"><i data-lucide="pencil"></i> Edit</button>
+                    <button class="btn-secondary btn-sm" title="Upload / view files" onclick="openFilesModal('${c.id}')"><i data-lucide="paperclip"></i>${(c.files && c.files.length) ? ' ' + c.files.length : ''}</button>
                     <button class="btn-purple btn-sm" title="Reassign to another agent" onclick="openReassignModal('${c.id}')"><i data-lucide="arrow-left-right"></i> Reassign</button>
                     <button class="btn-success btn-sm" onclick="quickLog('${c.id}')"><i data-lucide="phone"></i> Log</button>
                     <button class="btn-danger btn-sm" onclick="deleteContact('${c.id}')"><i data-lucide="trash-2"></i></button>
@@ -648,7 +649,7 @@ function daysUntil(dateStr) {
 
 function renewalRows() {
     return visibleContacts()
-        .filter(c => c.expiration)
+        .filter(c => c.expiration && c.type !== 'Prospect')   // prospects have no active policy to renew
         .map(c => ({ c, days: daysUntil(c.expiration) }))
         .filter(r => r.days !== null && r.days <= RENEWAL_WINDOW_DAYS)
         .sort((a, b) => a.days - b.days);
@@ -677,15 +678,111 @@ function renderRenewals() {
             <td>${esc(c.agent) || '—'}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-success btn-sm" title="Log renewal call" onclick="quickLog('${c.id}')"><i data-lucide="phone"></i> Call</button>
-                    <button class="btn-primary btn-sm" title="Update policy dates" onclick="openContactModal('${c.id}')"><i data-lucide="refresh-cw"></i> Renew</button>
+                    <button class="btn-primary btn-sm" title="Edit client / update policy dates" onclick="openContactModal('${c.id}')"><i data-lucide="pencil"></i> Edit</button>
+                    <button class="btn-secondary btn-sm" title="Upload / view files" onclick="openFilesModal('${c.id}')"><i data-lucide="paperclip"></i> Files${(c.files && c.files.length) ? ` (${c.files.length})` : ''}</button>
+                    <button class="btn-warning btn-sm" title="Not renewing — turn back into a prospect" onclick="turnIntoProspect('${c.id}')"><i data-lucide="user-minus"></i> Prospect</button>
+                    <button class="btn-success btn-sm" title="Log renewal call" onclick="quickLog('${c.id}')"><i data-lucide="phone"></i></button>
                     <button class="btn-purple btn-sm" title="Reassign" onclick="openReassignModal('${c.id}')"><i data-lucide="arrow-left-right"></i></button>
+                    <button class="btn-danger btn-sm" title="Delete client" onclick="deleteContact('${c.id}')"><i data-lucide="trash-2"></i></button>
                 </div>
             </td>
         </tr>`;
     }).join('')
         : `<tr><td colspan="9"><div class="no-data">No renewals due in the next ${RENEWAL_WINDOW_DAYS} days.</div></td></tr>`;
     refreshIcons();
+}
+
+// Turn a client back into a prospect (policy not renewing)
+function turnIntoProspect(id) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    if (!confirm(`Turn "${c.name}" into a Prospect?\n\nThey'll leave the Renewals list but stay in Contacts with all their info and files.`)) return;
+    c.type = 'Prospect';
+    activities.unshift({
+        id: uid(), type: 'note', contact: c.name, agent: c.agent || currentAgent(),
+        text: `Marked as Prospect (policy not renewed${c.expiration ? ', was expiring ' + fmtDate(c.expiration) : ''}) by ${currentAgent()}.`,
+        when: new Date().toISOString()
+    });
+    persist(); renderAll();
+    toast(`${c.name} is now a Prospect`);
+}
+
+// ── Client files (stored inline in the contact record) ──────────────
+const MAX_FILE_BYTES = 1.5 * 1024 * 1024;   // localStorage is small — keep files modest
+
+function openFilesModal(contactId) {
+    const c = contacts.find(x => x.id === contactId);
+    if (!c) return;
+    document.getElementById('filesContactId').value = c.id;
+    document.getElementById('filesModalTitle').textContent = `Files — ${c.name}`;
+    renderFilesList();
+    openModal('filesModal');
+}
+
+function renderFilesList() {
+    const c = contacts.find(x => x.id === document.getElementById('filesContactId').value);
+    const box = document.getElementById('filesList');
+    const files = (c && c.files) || [];
+    box.innerHTML = files.length ? files.map(f => `
+        <div style="display:flex;align-items:center;gap:10px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:8px;">
+            <i data-lucide="file-text" style="color:var(--blue);"></i>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.name)}</div>
+                <div style="font-size:11px;color:var(--gray-400);">${(f.size / 1024).toFixed(0)} KB · ${fmtWhen(f.when)}</div>
+            </div>
+            <button class="btn-secondary btn-sm" title="Download" onclick="downloadContactFile('${f.id}')"><i data-lucide="download"></i></button>
+            <button class="btn-danger btn-sm" title="Delete file" onclick="deleteContactFile('${f.id}')"><i data-lucide="trash-2"></i></button>
+        </div>`).join('')
+        : '<div class="no-data" style="padding:20px;">No files yet. Upload policy docs, dec pages, IDs…</div>';
+    refreshIcons();
+}
+
+function filesHandleUpload(event) {
+    const c = contacts.find(x => x.id === document.getElementById('filesContactId').value);
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!c) return;
+    files.forEach(file => {
+        if (file.size > MAX_FILE_BYTES) { toast(`${file.name} is too large (max 1.5 MB per file)`); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            if (!c.files) c.files = [];
+            const rec = { id: uid(), name: file.name, type: file.type || 'application/octet-stream', size: file.size, data: e.target.result, when: new Date().toISOString() };
+            c.files.push(rec);
+            try {
+                persist();
+            } catch (err) {
+                c.files.pop();
+                toast('⚠ Browser storage is full — delete some files first');
+                return;
+            }
+            activities.unshift({ id: uid(), type: 'note', contact: c.name, agent: currentAgent(), text: `File uploaded: ${file.name}`, when: new Date().toISOString() });
+            try { persist(); } catch { /* activity log best-effort */ }
+            renderFilesList(); renderRenewals(); renderContacts();
+            toast(`${file.name} uploaded ✓`);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function downloadContactFile(fileId) {
+    const c = contacts.find(x => x.id === document.getElementById('filesContactId').value);
+    const f = c?.files?.find(x => x.id === fileId);
+    if (!f) return;
+    const a = document.createElement('a');
+    a.href = f.data;
+    a.download = f.name;
+    a.click();
+}
+
+function deleteContactFile(fileId) {
+    const c = contacts.find(x => x.id === document.getElementById('filesContactId').value);
+    if (!c || !c.files) return;
+    const f = c.files.find(x => x.id === fileId);
+    if (!f || !confirm(`Delete file "${f.name}"?`)) return;
+    c.files = c.files.filter(x => x.id !== fileId);
+    persist(); renderFilesList(); renderRenewals(); renderContacts();
+    toast('File deleted');
 }
 
 // ── Agents section ───────────────────────────────────────────────────
