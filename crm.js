@@ -29,6 +29,14 @@ const STAGES = [
 
 const ACTIVITY_ICONS = { call: 'phone', email: 'mail', note: 'sticky-note', meeting: 'calendar' };
 
+// ── One-time reset (2026-07-22): wipe sample/seed data from browsers
+//    that loaded the initial release ─────────────────────────────────
+if (!localStorage.getItem('uibcrm_reset_20260722')) {
+    ['uibcrm_contacts', 'uibcrm_leads', 'uibcrm_tasks', 'uibcrm_activities']
+        .forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('uibcrm_reset_20260722', '1');
+}
+
 // ── State ────────────────────────────────────────────────────────────
 let contacts   = load('uibcrm_contacts');
 let leads      = load('uibcrm_leads');
@@ -59,40 +67,6 @@ function toast(msg) {
 }
 
 function refreshIcons() { if (window.lucide) lucide.createIcons(); }
-
-// ── Seed data (first run only) ───────────────────────────────────────
-function seedIfEmpty() {
-    if (contacts.length || leads.length || tasks.length || activities.length) return;
-    const d = todayISO();
-    contacts = [
-        { id: uid(), name: 'Maria Gonzalez',  type: 'Customer', phone: '(305) 555-0142', email: 'maria.g@email.com',  address: '1240 W 29th St, Hialeah, FL', dob: '', lob: 'Personal Auto',   carrier: 'Progressive',        policy: 'PRG-88231', premium: 2140, effective: '2026-05-01', expiration: '2026-11-01', agent: 'Uri',          office: 'Hialeah',   notes: 'Renewal shopper — watch rate at renewal.' },
-        { id: uid(), name: 'Carlos Mendez',   type: 'Customer', phone: '(786) 555-0968', email: 'cmendez@gmail.com',   address: '89 E 10th Ave, Hialeah, FL',  dob: '', lob: 'Commercial Auto', carrier: 'Infinity',           policy: 'INF-45120', premium: 6890, effective: '2026-03-15', expiration: '2027-03-15', agent: 'Lazaro',       office: 'Hialeah',   notes: 'Box truck + trailer. Referred his brother.' },
-        { id: uid(), name: 'Yolanda Perez',   type: 'Customer', phone: '(305) 555-3311', email: 'yperez@yahoo.com',    address: '445 Palm Ave, Hialeah, FL',   dob: '', lob: 'Homeowners',      carrier: 'Citizens',           policy: 'CIT-20977', premium: 3480, effective: '2026-01-20', expiration: '2027-01-20', agent: 'Amanda',       office: 'Hialeah',   notes: '' },
-        { id: uid(), name: 'Reinaldo Diaz',   type: 'Prospect', phone: '(954) 555-7720', email: '',                    address: '',                            dob: '', lob: 'Workers Comp',    carrier: '',                   policy: '',          premium: 0,    effective: '',           expiration: '',           agent: 'Jorge Castro', office: 'Franchise', notes: 'Roofing crew of 6 — needs WC quote.' },
-        { id: uid(), name: 'Ana Rodriguez',   type: 'Lead',     phone: '(305) 555-8804', email: 'anar88@email.com',    address: '',                            dob: '', lob: 'Personal Auto',   carrier: 'United Automobile',  policy: '',          premium: 0,    effective: '',           expiration: '',           agent: 'Randy',        office: 'Hialeah',   notes: 'Two vehicles, prior lapse.' }
-    ];
-    leads = [
-        { id: uid(), name: 'Ana Rodriguez',       phone: '(305) 555-8804', source: 'Phone',    lob: 'Personal Auto',          carrier: 'United Automobile', premium: 1850,  stage: 'quoted',   agent: 'Randy',        notes: 'Quoted $1,850 — waiting on down payment.', created: d },
-        { id: uid(), name: 'Reinaldo Diaz',       phone: '(954) 555-7720', source: 'Referral', lob: 'Workers Comp',           carrier: 'Other',             premium: 9200,  stage: 'new',      agent: 'Jorge Castro', notes: 'Needs certs for GC job.', created: d },
-        { id: uid(), name: 'Trucking Dorales LLC', phone: '(786) 555-2288', source: 'Walk-In',  lob: 'Non-Trucking Liability', carrier: 'Progressive',       premium: 4400,  stage: 'followup', agent: 'Lazaro',       notes: 'Owner-operator, leased to carrier.', created: d },
-        { id: uid(), name: 'Bella Nails Salon',    phone: '(305) 555-6119', source: 'Website',  lob: 'General Liability',      carrier: 'Bristol West',      premium: 1200,  stage: 'bound',    agent: 'Amanda',       notes: 'Bound — send COI to landlord.', created: d },
-        { id: uid(), name: 'Pedro Fuentes',        phone: '(305) 555-4470', source: 'Referral', lob: 'Personal Auto',          carrier: 'Kemper Insurance',  premium: 2300,  stage: 'lost',     agent: 'Uri',          notes: 'Went with online quote.', created: d }
-    ];
-    const in2 = new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10);
-    const in5 = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
-    tasks = [
-        { id: uid(), title: 'Collect down payment from Ana Rodriguez', contact: 'Ana Rodriguez',        agent: 'Randy',        due: in2, priority: 'High',   done: false },
-        { id: uid(), title: 'Send COI to Bella Nails landlord',        contact: 'Bella Nails Salon',    agent: 'Amanda',       due: d,   priority: 'High',   done: false },
-        { id: uid(), title: 'Follow up on WC quote for Reinaldo',      contact: 'Reinaldo Diaz',        agent: 'Jorge Castro', due: in5, priority: 'Medium', done: false },
-        { id: uid(), title: 'Review Maria Gonzalez renewal rate',      contact: 'Maria Gonzalez',       agent: 'Uri',          due: in5, priority: 'Low',    done: false }
-    ];
-    activities = [
-        { id: uid(), type: 'call',  contact: 'Ana Rodriguez',        agent: 'Randy',  text: 'Called with United Auto quote — $1,850/yr. She wants to pay Friday.', when: new Date().toISOString() },
-        { id: uid(), type: 'note',  contact: 'Trucking Dorales LLC', agent: 'Lazaro', text: 'Needs copy of lease agreement before binding NTL.',                    when: new Date().toISOString() },
-        { id: uid(), type: 'email', contact: 'Bella Nails Salon',    agent: 'Amanda', text: 'Emailed binder + invoice. Policy bound with Bristol West.',            when: new Date().toISOString() }
-    ];
-    persist();
-}
 
 // ── Tabs ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -631,7 +605,6 @@ function renderAll() {
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────
-seedIfEmpty();
 fillStaticSelects();
 fillContactSelects();
 renderAll();
