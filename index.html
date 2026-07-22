@@ -927,6 +927,32 @@
                     </div>
                 </div>
 
+                <!-- ── Claude AI — Renewal Report Processor (Admin only) ── -->
+                <div class="admin-only" id="aiChatSection" style="margin:0 0 22px 0;background:linear-gradient(135deg,#fef7f0,#fde4cc);border:1.5px solid #f5c19a;border-radius:14px;padding:18px 20px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;gap:9px;">
+                            <span style="font-size:20px;">✨</span>
+                            <span style="font-size:15px;font-weight:700;color:#9a3412;">Claude AI — Renewal Report Processor</span>
+                        </div>
+                        <button onclick="aiNewConversation()" style="background:#fff;border:1px solid #f5c19a;color:#c2410c;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;box-shadow:none;">+ New chat</button>
+                    </div>
+                    <div style="font-size:12.5px;color:#9a3412;margin-bottom:12px;line-height:1.5;">
+                        📤 <strong>Upload renewal reports</strong> from any insurance carrier (PDF). Claude will read every policy on the report and import them into the CRM — matching existing clients by policy number or name, updating expiration dates and premiums, and creating new client records for anyone not in the system. You can also just chat and ask questions about your book.
+                    </div>
+                    <div id="aiChatMessages" style="background:#fff;border:1px solid #fcd9b6;border-radius:10px;min-height:120px;max-height:480px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;font-size:14px;"></div>
+                    <div id="aiChatFilePreview" style="display:none;margin-top:8px;padding:8px 12px;background:#fde4cc;border:1px solid #f5c19a;border-radius:8px;font-size:12px;color:#9a3412;"></div>
+                    <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end;">
+                        <button onclick="document.getElementById('aiChatPdfInput').click()" title="Upload renewal report PDF(s)"
+                            style="background:#fff;border:1.5px solid #f5c19a;color:#c2410c;padding:10px 13px;border-radius:8px;cursor:pointer;font-size:16px;line-height:1;box-shadow:none;flex-shrink:0;">📎</button>
+                        <input type="file" id="aiChatPdfInput" accept="application/pdf" multiple style="display:none;" onchange="aiHandlePdfUpload(event)">
+                        <textarea id="aiChatInput" placeholder="Ask anything, or attach renewal report PDFs…" rows="2"
+                            style="flex:1;padding:10px 12px;border:1.5px solid #f5c19a;border-radius:8px;font-family:inherit;font-size:13.5px;resize:vertical;background:#fff;"
+                            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSendMessage();}"></textarea>
+                        <button onclick="aiSendMessage()" id="aiChatSendBtn"
+                            style="background:linear-gradient(135deg,#ea580c,#c2410c);color:#fff;border:none;padding:11px 20px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13.5px;flex-shrink:0;">Send</button>
+                    </div>
+                </div>
+
                 <div class="filter-section admin-only">
                     <div class="filter-group">
                         <label>Agent</label>
